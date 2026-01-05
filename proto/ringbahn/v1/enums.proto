@@ -9,4 +9,5 @@ enum DeviceType {
   DEVICE_TYPE_SD_ADC = 3; // Sigma Delta ADC
   DEVICE_TYPE_DIGITAL_OUT = 4; // Digital output / PWM bridge
   DEVICE_TYPE_RS485_BRIDGE = 5; // RS485 Bridge
+  DEVICE_TYPE_ROVER = 6; // Rover / Track Controller
 }
