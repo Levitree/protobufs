@@ -89,14 +89,22 @@ set(PROTOBUFS_INCLUDE_DIRS
 )
 
 # ---------------------------------------------------------------------------
-# ESP-IDF component registration
+# ESP-IDF component registration (only when building as IDF component)
 # ---------------------------------------------------------------------------
+if(ESP_PLATFORM)
+    idf_component_register(
+        SRCS ${PROTOBUFS_SRCS}
+        INCLUDE_DIRS ${PROTOBUFS_INCLUDE_DIRS}
+    )
 
-idf_component_register(
-    SRCS ${PROTOBUFS_SRCS}
-    INCLUDE_DIRS ${PROTOBUFS_INCLUDE_DIRS}
-)
-
-target_compile_definitions(${COMPONENT_LIB} PUBLIC PB_BUFFER_ONLY)
-target_compile_definitions(${COMPONENT_LIB} PUBLIC PB_LITTLE_ENDIAN_8BIT)
-target_compile_definitions(${COMPONENT_LIB} PUBLIC PB_NO_ERRMSG)
+    target_compile_definitions(${COMPONENT_LIB} PUBLIC PB_BUFFER_ONLY)
+    target_compile_definitions(${COMPONENT_LIB} PUBLIC PB_LITTLE_ENDIAN_8BIT)
+    target_compile_definitions(${COMPONENT_LIB} PUBLIC PB_NO_ERRMSG)
+else()
+    # Standard CMake library for non-IDF builds
+    add_library(protobufs STATIC ${PROTOBUFS_SRCS})
+    target_include_directories(protobufs PUBLIC ${PROTOBUFS_INCLUDE_DIRS})
+    target_compile_definitions(protobufs PUBLIC PB_BUFFER_ONLY)
+    target_compile_definitions(protobufs PUBLIC PB_LITTLE_ENDIAN_8BIT)
+    target_compile_definitions(protobufs PUBLIC PB_NO_ERRMSG)
+endif()
