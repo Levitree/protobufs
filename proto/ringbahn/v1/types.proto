@@ -4,9 +4,9 @@ package ringbahn.v1;
 
 import "ringbahn/v1/enums.proto";
 
-// 12-byte identifier carried inside Ringbahn frames
+// 6-byte identifier carried inside Ringbahn frames
 message DeviceUUID {
-  bytes value = 1; // Fixed-length 12 byte unique identifier
+  bytes value = 1; // Fixed-length 6 byte unique identifier
 }
 
 // Standard command response shared across device protocols

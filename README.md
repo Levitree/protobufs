@@ -158,14 +158,14 @@ All commands and telemetry are sent inside the Ringbahn frame. The base layout i
 
 For UART links we also include addressing (inside the CRC):
 
-- **12-byte sender UUID** – Device UUID of the source
-- **12-byte recipient UUID** – Device UUID of the target
+- **6-byte sender UUID** – Device UUID of the source
+- **6-byte recipient UUID** – Device UUID of the target
 
 This removes the need for a giant envelope message. Each device only imports the proto file that defines the payload it cares about (e.g., `device_adc.proto`).
 
 #### Device UUIDs
 
-`types.proto` defines `DeviceUUID`, a fixed 12-byte identifier that mirrors the IDs carried in the Ringbahn header. `DeviceInfo` now contains this UUID along with any legacy short IDs so both discovery flows and payloads speak the same addressing language.
+`types.proto` defines `DeviceUUID`, a fixed 6-byte identifier that mirrors the IDs carried in the Ringbahn header. `DeviceInfo` now contains this UUID along with any legacy short IDs so both discovery flows and payloads speak the same addressing language.
 
 ### Device Types
 
