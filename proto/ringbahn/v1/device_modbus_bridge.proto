@@ -4,6 +4,33 @@ package ringbahn.v1;
 
 import "ringbahn/v1/device_common.proto";
 
+// ===== Serial Port Configuration Enums =====
+
+// Standard baud rates (0-7)
+enum SerialBaudRate {
+  BAUD_1200 = 0;
+  BAUD_2400 = 1;
+  BAUD_4800 = 2;
+  BAUD_9600 = 3;
+  BAUD_19200 = 4;   // Default
+  BAUD_38400 = 5;
+  BAUD_57600 = 6;
+  BAUD_115200 = 7;
+}
+
+// Parity settings
+enum SerialParity {
+  PARITY_NONE = 0;  // Default
+  PARITY_ODD = 1;
+  PARITY_EVEN = 2;
+}
+
+// Stop bits
+enum SerialStopBits {
+  STOPBITS_1 = 0;   // Default
+  STOPBITS_2 = 1;
+}
+
 // Top-level Modbus Bridge device command message
 message ModbusBridgeDeviceCommand {
   oneof command {
@@ -11,6 +38,9 @@ message ModbusBridgeDeviceCommand {
     SystemInfoRequest system_info = 1; // Response: SystemInfoResponse
     PingCommand ping = 2; // Response: CommandResult
     ResetCommand reset = 3; // Response: CommandResult
+
+    // UART configuration
+    ConfigureUartRequest configure_uart = 5; // Response: CommandResult
 
     // Modbus-specific commands
     ModbusReadCoilsRequest read_coils = 10; // Response: ModbusReadCoilsResponse
@@ -22,6 +52,15 @@ message ModbusBridgeDeviceCommand {
     ModbusWriteMultipleCoilsRequest write_multiple_coils = 16; // Response: CommandResult
     ModbusWriteMultipleRegistersRequest write_multiple_registers = 17; // Response: CommandResult
   }
+}
+
+// ===== UART Configuration =====
+
+// Response: CommandResult
+message ConfigureUartRequest {
+  SerialBaudRate baud_rate = 1;   // Baud rate (default: BAUD_19200)
+  SerialParity parity = 2;        // Parity (default: PARITY_NONE)
+  SerialStopBits stop_bits = 3;   // Stop bits (default: STOPBITS_1)
 }
 
 // ===== Modbus Read Commands =====
