@@ -34,6 +34,7 @@ message RoutingDeviceCommand {
     TerrabootRequestBlockRequest terraboot_request = 34; // Response: TerrabootRequestBlockResponse
     TerrabootCompleteRequest terraboot_complete = 35; // Response: TerrabootCompleteResponse
     TerrabootGetIdRequest terraboot_get_id = 36; // Response: TerrabootGetIdResponse
+    TerrabootIdentifyRequest terraboot_identify = 37; //Response: TerrabootIdentifyResponse
   }
 }
 
@@ -169,4 +170,12 @@ message TerrabootGetIdRequest {
 
 message TerrabootGetIdResponse {
   bytes can_uuid = 1; // 6 byte CAN UUID (padded by terraboot)
+}
+
+message TerrabootIdentifyRequest {
+  DeviceUUID device_uuid = 1; // Target device UUID (routing translates to CAN node ID)
+}
+
+message TerrabootIdentifyResponse {
+  // Empty - success indicated by no error
 }
