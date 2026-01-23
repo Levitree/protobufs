@@ -1,0 +1,2 @@
+# device_rover.options - nanopb options for rover messages
+# No special field size constraints needed for this simple protocol

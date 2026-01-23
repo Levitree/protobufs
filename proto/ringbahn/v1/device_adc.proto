@@ -24,22 +24,10 @@ message ADCGetStateRequest {
   // Empty - reads all channels
 }
 
-// Single ADC channel reading
-message ADCCurrentChannelValue {
-  int32 channel_number = 1; // Channel number;
-  int32 current_ma = 2; // Current in milliamps;
-  bool open_line_detected = 3; // Indicates if an open line is detected;
-}
-
-// Single ADC voltage channel reading
-message ADCVoltageChannelValue {
-  int32 channel_number = 1; // Channel number;
-  int32 voltage_mv = 2; // Voltage in millivolts;
-}
-
 // Complete ADC device state
+// Uses packed bytes for efficiency: 3 bytes per channel [channel_num, value_lo, value_hi]
+// channel_num: 1-8 = current (µA), 9-12 = voltage (mV)
+// Only non-open-line channels are included; missing channels = open line
 message ADCState {
-  int64 timestamp_ms = 1; // When state was captured (milliseconds since epoch);
-  repeated ADCCurrentChannelValue current_values = 2; // ADC channel values;
-  repeated ADCVoltageChannelValue voltage_values = 3; // Voltage channel values;
+  bytes packed_values = 1;
 }
