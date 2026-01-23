@@ -1,1 +1,2 @@
-ringbahn.v1.DigitalOutputState.values max_count:8
+ringbahn.v1.DigitalOutputState.packed_duty_cycles max_size:8
+ringbahn.v1.SetAllChannelsRequest.packed_duty_cycles max_size:8

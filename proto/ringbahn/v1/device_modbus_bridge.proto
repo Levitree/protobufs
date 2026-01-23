@@ -38,6 +38,7 @@ message ModbusBridgeDeviceCommand {
     SystemInfoRequest system_info = 1; // Response: SystemInfoResponse
     PingCommand ping = 2; // Response: CommandResult
     ResetCommand reset = 3; // Response: CommandResult
+    IdentifyCommand identify = 4; // Response: CommandResult
 
     // UART configuration
     ConfigureUartRequest configure_uart = 5; // Response: CommandResult

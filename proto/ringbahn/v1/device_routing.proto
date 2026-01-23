@@ -12,11 +12,10 @@ message RoutingDeviceCommand {
     SystemInfoRequest system_info = 1; // Response: SystemInfoResponse
     PingCommand ping = 2; // Response: CommandResult
     ResetCommand reset = 3; // Response: CommandResult
+    IdentifyCommand identify = 4; // Response: CommandResult
 
     // Discovery commands
     RoutingAttachedDevicesRequest attached_devices = 10; // Response: RoutingAttachedDevicesResponse
-    RoutingIdentifyActiveDeviceRequest identify = 11; // Response: RoutingIdentifyActiveDeviceResponse
-    RoutingSetChannelIdentityRequest set_channel = 12; // Response: AcknowledgeResponse
     RoutingGetStateRequest get_state = 13; // Response: RoutingDeviceState
 
     // Internal OTA commands
@@ -56,19 +55,6 @@ message RoutingAttachedDevicesRequest {}
 
 message RoutingAttachedDevicesResponse {
   repeated DeviceInfo devices = 1;
-}
-
-// Response: RoutingIdentifyActiveDeviceResponse
-message RoutingIdentifyActiveDeviceRequest {}
-
-message RoutingIdentifyActiveDeviceResponse {
-  DeviceInfo device = 1; // Active device routed to the UART session
-}
-
-// Response: AcknowledgeResponse
-message RoutingSetChannelIdentityRequest {
-  int32 channel = 1;
-  bool active = 2;
 }
 
 // ===== Internal OTA (Routing firmware) =====

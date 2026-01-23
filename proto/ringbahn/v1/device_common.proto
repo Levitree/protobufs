@@ -35,3 +35,9 @@ message PingCommand {
 message ResetCommand {
   // Empty - resets the device
 }
+
+// Request device identification (LED blinks for 10 seconds)
+// Response: CommandResult
+message IdentifyCommand {
+  // Empty - triggers 10 second LED blink sequence
+}
