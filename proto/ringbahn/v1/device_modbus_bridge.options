@@ -1,11 +1,15 @@
-# Modbus Bridge Options - set max count for bulk operations to 32
+# Modbus Bridge Options - packed binary format sizes
 
-# Read response arrays
-ringbahn.v1.ModbusReadCoilsResponse.values max_count:32
-ringbahn.v1.ModbusReadDiscreteInputsResponse.values max_count:32
-ringbahn.v1.ModbusReadHoldingRegistersResponse.values max_count:32
-ringbahn.v1.ModbusReadInputRegistersResponse.values max_count:32
+# Read response packed data
+# Coils/discrete: [qty:1][bits:4] = 5 bytes max
+ringbahn.v1.ModbusReadCoilsResponse.packed_data max_size:5
+ringbahn.v1.ModbusReadDiscreteInputsResponse.packed_data max_size:5
+# Registers: [qty:1][values:64] = 65 bytes max (32 x 2-byte values)
+ringbahn.v1.ModbusReadHoldingRegistersResponse.packed_data max_size:65
+ringbahn.v1.ModbusReadInputRegistersResponse.packed_data max_size:65
 
-# Write request arrays
-ringbahn.v1.ModbusWriteMultipleCoilsRequest.values max_count:32
-ringbahn.v1.ModbusWriteMultipleRegistersRequest.values max_count:32
+# Write request packed data
+# Multiple coils: [slave:1][addr:2][qty:1][bits:4] = 8 bytes max
+ringbahn.v1.ModbusWriteMultipleCoilsRequest.packed_data max_size:8
+# Multiple registers: [slave:1][addr:2][qty:1][values:64] = 68 bytes max
+ringbahn.v1.ModbusWriteMultipleRegistersRequest.packed_data max_size:68

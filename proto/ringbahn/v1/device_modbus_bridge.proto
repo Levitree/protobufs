@@ -72,8 +72,12 @@ message ModbusReadCoilsRequest {
   uint32 quantity = 3; // Number of coils to read (1-32);
 }
 
+// Packed format: [quantity:1][coil_bits:ceil(N/8)]
+// - Byte 0: quantity (1-32)
+// - Bytes 1-4: bit-packed coils (bit 0 of byte 1 = coil 0)
+// - Error: [0xFF][error_code:1]
 message ModbusReadCoilsResponse {
-  repeated bool values = 1; // Coil values (max 32);
+  bytes packed_data = 1; // max_size: 5
 }
 
 // Response: ModbusReadDiscreteInputsResponse
@@ -83,8 +87,12 @@ message ModbusReadDiscreteInputsRequest {
   uint32 quantity = 3; // Number of discrete inputs to read (1-32);
 }
 
+// Packed format: [quantity:1][input_bits:ceil(N/8)]
+// - Byte 0: quantity (1-32)
+// - Bytes 1-4: bit-packed inputs (bit 0 of byte 1 = input 0)
+// - Error: [0xFF][error_code:1]
 message ModbusReadDiscreteInputsResponse {
-  repeated bool values = 1; // Discrete input values (max 32);
+  bytes packed_data = 1; // max_size: 5
 }
 
 // Response: ModbusReadHoldingRegistersResponse
@@ -94,8 +102,12 @@ message ModbusReadHoldingRegistersRequest {
   uint32 quantity = 3; // Number of registers to read (1-32);
 }
 
+// Packed format: [quantity:1][values:2*N little-endian]
+// - Byte 0: quantity (1-32)
+// - Bytes 1-2N: uint16 values in little-endian
+// - Error: [0xFF][error_code:1]
 message ModbusReadHoldingRegistersResponse {
-  repeated uint32 values = 1; // Register values (max 32);
+  bytes packed_data = 1; // max_size: 65
 }
 
 // Response: ModbusReadInputRegistersResponse
@@ -105,8 +117,12 @@ message ModbusReadInputRegistersRequest {
   uint32 quantity = 3; // Number of registers to read (1-32);
 }
 
+// Packed format: [quantity:1][values:2*N little-endian]
+// - Byte 0: quantity (1-32)
+// - Bytes 1-2N: uint16 values in little-endian
+// - Error: [0xFF][error_code:1]
 message ModbusReadInputRegistersResponse {
-  repeated uint32 values = 1; // Register values (max 32);
+  bytes packed_data = 1; // max_size: 65
 }
 
 // ===== Modbus Write Commands =====
@@ -126,15 +142,13 @@ message ModbusWriteSingleRegisterRequest {
 }
 
 // Response: CommandResult
+// Packed format: [slave_addr:1][start_addr:2 LE][quantity:1][coil_bits:ceil(N/8)]
 message ModbusWriteMultipleCoilsRequest {
-  uint32 slave_address = 1; // Modbus slave address (1-247);
-  uint32 starting_address = 2; // Starting coil address;
-  repeated bool values = 3; // Coil values (max 32);
+  bytes packed_data = 1; // max_size: 8
 }
 
 // Response: CommandResult
+// Packed format: [slave_addr:1][start_addr:2 LE][quantity:1][values:2*N LE]
 message ModbusWriteMultipleRegistersRequest {
-  uint32 slave_address = 1; // Modbus slave address (1-247);
-  uint32 starting_address = 2; // Starting register address;
-  repeated uint32 values = 3; // Register values (max 32);
+  bytes packed_data = 1; // max_size: 68
 }
