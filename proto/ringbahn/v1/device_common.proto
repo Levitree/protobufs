@@ -17,9 +17,6 @@ message SystemInfoRequest {
 message SystemInfoResponse {
   uint32 hardware_version = 1; // Hardware revision number;
   uint32 software_version = 2; // Software/firmware version number;
-  uint32 hardware_codename = 3; // Hardware identifier code;
-  uint32 software_codename = 4; // Software identifier code;
-  int64 uptime_ms = 5; // System uptime in milliseconds;
   DeviceType device_type = 6; // Type of device;
   DeviceInfo device_info = 7; // Additional device information;
 }

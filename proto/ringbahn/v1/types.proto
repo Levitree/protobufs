@@ -12,29 +12,23 @@ message DeviceUUID {
 // Standard command response shared across device protocols
 message CommandResult {
   bool success = 1;
-  int32 error_code = 2;
+  uint32 error_code = 2;
   string detail = 3; // Optional human-readable detail
-}
-
-// Response metadata for debugging and monitoring
-message ResponseMetadata {
-  int64 processing_time_us = 1; // Processing time in microseconds;
-  int64 timestamp_ms = 2; // Response timestamp;
 }
 
 // Device information returned during discovery
 message DeviceInfo {
   DeviceType device_type = 1;
-  DeviceUUID device_uuid = 2; // Ringbahn device identifier;
-  uint32 short_id = 3; // Short numeric identifier;
+  DeviceUUID device_uuid = 2; //6-byte Ringbahn device identifier.
 }
 
 // GPS location and telemetry data shared by mobile devices
 message GPSState {
-  double latitude = 1; // Latitude in degrees;
-  double longitude = 2; // Longitude in degrees;
+  float latitude = 1; // Latitude in degrees;
+  float longitude = 2; // Longitude in degrees;
   float altitude = 3; // Altitude in meters;
   float speed = 4; // Speed in m/s;
   float heading = 5; // Heading in degrees;
-  int32 satellites = 6; // Number of satellites used for the fix;
+  uint32 satellites = 6; // Number of satellites used for the fix;
+  bool has_fix = 7;
 }

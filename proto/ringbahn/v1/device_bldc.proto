@@ -1,0 +1,43 @@
+syntax = "proto3";
+
+package ringbahn.v1;
+
+import "ringbahn/v1/device_common.proto";
+
+// Top-level BLDC device command message
+message BLDCDeviceCommand {
+  oneof command {
+    // Common commands
+    SystemInfoRequest system_info = 1; // Response: SystemInfoResponse
+    PingCommand ping = 2; // Response: CommandResult
+    ResetCommand reset = 3; // Response: CommandResult
+    IdentifyCommand identify = 4; // Response: CommandResult
+
+    // BLDC-specific commands
+    BLDCMovementCommand movement = 10; // Response: CommandResult
+    BLDCEmergencyStopCommand emergency_stop = 11; // Response: CommandResult
+
+    BLDCGetStateRequest get_state = 12; // Response: BLDCDeviceState
+  }
+}
+
+// ===== BLDC-Specific Commands =====
+
+// Response: BLDCDeviceState
+message BLDCGetStateRequest {}
+
+// Response: CommandResult
+message BLDCEmergencyStopCommand {}
+
+// Current BLDC device state
+message BLDCDeviceState {
+  bool tracks_active = 1; // Indicates if any track is moving;
+  sint32 ch1_actual_speed = 2;
+  sint32 ch2_actual_speed = 3;
+}
+
+// Response: CommandResult
+message BLDCMovementCommand {
+  sint32 ch1_speed = 1;
+  sint32 ch2_speed = 2;
+}
