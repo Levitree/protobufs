@@ -52,6 +52,11 @@ message ModbusBridgeDeviceCommand {
     ModbusWriteSingleRegisterRequest write_single_register = 15; // Response: CommandResult
     ModbusWriteMultipleCoilsRequest write_multiple_coils = 16; // Response: CommandResult
     ModbusWriteMultipleRegistersRequest write_multiple_registers = 17; // Response: CommandResult
+
+    // Timeout safety commands
+    SetTimeoutCommandsRequest set_timeout_commands = 18; // Response: CommandResult
+    ClearTimeoutCommandsRequest clear_timeout_commands = 19; // Response: CommandResult
+    GetTimeoutConfigRequest get_timeout_config = 20; // Response: TimeoutConfigResponse
   }
 }
 
@@ -152,4 +157,42 @@ message ModbusWriteMultipleCoilsRequest {
 // Packed format: [slave_addr:1][start_addr:2 LE][quantity:1][values:2*N LE]
 message ModbusWriteMultipleRegistersRequest {
   bytes packed_data = 1; // max_size: 68
+}
+
+// ===== Timeout Safety Configuration =====
+
+// A single Modbus write command for timeout safety
+message TimeoutWriteCommand {
+  oneof command {
+    ModbusWriteSingleCoilRequest write_coil = 1;
+    ModbusWriteSingleRegisterRequest write_register = 2;
+    ModbusWriteMultipleRegistersRequest write_registers = 3;
+  }
+}
+
+// Configure commands to execute when ping timeout occurs
+// Response: CommandResult
+message SetTimeoutCommandsRequest {
+  uint32 timeout_ms = 1;  // Timeout period in ms (0 = disable, default: 20000)
+  repeated TimeoutWriteCommand commands = 2;  // Max 8 commands
+}
+
+// Clear timeout configuration
+// Response: CommandResult
+message ClearTimeoutCommandsRequest {
+  // Empty - clears all stored timeout commands
+}
+
+// Query timeout status
+// Response: TimeoutConfigResponse
+message GetTimeoutConfigRequest {
+  // Empty
+}
+
+// Response with current timeout configuration
+message TimeoutConfigResponse {
+  uint32 timeout_ms = 1;           // Current timeout period (0 = disabled)
+  uint32 command_count = 2;        // Number of stored commands
+  bool timeout_active = 3;         // True if currently in timeout state
+  uint32 last_ping_elapsed_ms = 4; // Milliseconds since last ping
 }

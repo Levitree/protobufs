@@ -13,3 +13,7 @@ ringbahn.v1.ModbusReadInputRegistersResponse.packed_data max_size:65
 ringbahn.v1.ModbusWriteMultipleCoilsRequest.packed_data max_size:8
 # Multiple registers: [slave:1][addr:2][qty:1][values:64] = 68 bytes max
 ringbahn.v1.ModbusWriteMultipleRegistersRequest.packed_data max_size:68
+
+# Timeout safety configuration
+# Max 8 commands for timeout execution
+ringbahn.v1.SetTimeoutCommandsRequest.commands max_count:8
