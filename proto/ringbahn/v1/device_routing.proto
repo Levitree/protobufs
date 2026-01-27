@@ -105,8 +105,11 @@ message TerrabootConnectResponse {
   uint32 protocol_version = 1;
   uint32 start_address = 2;
   uint32 block_size = 3;
-  string mcu_type = 4;
-  string software_version = 5;
+  uint32 flash_size = 4;
+  string mcu_type = 5;
+  string terraboot_version = 6;
+  string app_variant = 7;
+  string app_version = 8;
 }
 
 // Response: TerrabootSendBlockResponse

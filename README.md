@@ -201,7 +201,7 @@ See [PROTOCOL.md](docs/PROTOCOL.md) for detailed protocol specification.
 `proto/device_routing.proto` defines the UART-to-CAN bridge. It now owns every discovery primitive (attached devices, active channel selection) as well as both firmware paths:
 
 - **Internal OTA**: Commands (`InternalOta*`) stream new firmware into the routing MCU and return compact `InternalOtaStatus` updates.
-- **Terraboot CAN bootloader**: `Terraboot*` messages map one-to-one with the Katapult/Terraboot protocol (`connect`, `send_block`, `eof`, `request_block`, `complete`, `get_canbus_id`) so routing firmware can forward frames down the CAN bus without extra wrappers.
+- **Terraboot CAN bootloader**: `Terraboot*` messages map one-to-one with the Terraboot/Terraboot protocol (`connect`, `send_block`, `eof`, `request_block`, `complete`, `get_canbus_id`) so routing firmware can forward frames down the CAN bus without extra wrappers.
 
 All other device protos cover nodes that live exclusively on the CAN bus.
 
