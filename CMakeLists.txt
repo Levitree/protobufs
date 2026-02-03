@@ -33,7 +33,17 @@ if(BUF_EXECUTABLE AND NOT CMAKE_BUILD_EARLY_EXPANSION)
         file(READ "${BUF_CODEGEN_STAMP}" _prev_hash)
         string(STRIP "${_prev_hash}" _prev_hash)
         if(_prev_hash STREQUAL BUF_CODEGEN_HASH)
-            set(_run_buf_codegen FALSE)
+            # Also verify output directory and files exist before skipping
+            if(EXISTS "${NANOPB_OUT_PATH}" AND IS_DIRECTORY "${NANOPB_OUT_PATH}")
+                file(GLOB _nanopb_check "${NANOPB_OUT_PATH}/*.pb.c")
+                if(_nanopb_check)
+                    set(_run_buf_codegen FALSE)
+                else()
+                    message(STATUS "Nanopb output files missing, forcing regeneration")
+                endif()
+            else()
+                message(STATUS "Nanopb output directory missing, forcing regeneration")
+            endif()
         endif()
     endif()
 
@@ -71,10 +81,13 @@ set(NANOPB_CORE_SRCS
     "${CMAKE_CURRENT_LIST_DIR}/nanopb/pb_decode.c"
 )
 
-# Generated nanopb sources
-file(GLOB_RECURSE NANOPB_GEN_SRCS
-    "${NANOPB_OUT_PATH}/*.pb.c"
-)
+# Generated nanopb sources (CONFIGURE_DEPENDS triggers re-configure if files change)
+# Note: CONFIGURE_DEPENDS is invalid during IDF early expansion (script mode)
+if(CMAKE_BUILD_EARLY_EXPANSION)
+    file(GLOB_RECURSE NANOPB_GEN_SRCS "${NANOPB_OUT_PATH}/*.pb.c")
+else()
+    file(GLOB_RECURSE NANOPB_GEN_SRCS CONFIGURE_DEPENDS "${NANOPB_OUT_PATH}/*.pb.c")
+endif()
 
 # Combine all sources
 set(PROTOBUFS_SRCS
