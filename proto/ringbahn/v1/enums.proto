@@ -10,5 +10,6 @@ enum DeviceType {
   DEVICE_TYPE_DIGITAL_OUT = 4; // Digital output / PWM bridge
   DEVICE_TYPE_RS485_BRIDGE = 5; // RS485 Bridge
   DEVICE_TYPE_BLDC = 6; // BLDC
+  DEVICE_TYPE_BLDC_CONTROLLER = 7; // BLDC Controller (joystick/button pad)
   DEVICE_TYPE_TERRABOOT = 254; // No app!
 }

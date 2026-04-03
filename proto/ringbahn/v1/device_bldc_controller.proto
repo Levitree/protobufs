@@ -1,0 +1,32 @@
+syntax = "proto3";
+
+package ringbahn.v1;
+
+import "ringbahn/v1/device_common.proto";
+
+// Top-level BLDC controller device command message
+// Manual joystick/button controller for the BLDC board
+message BLDCControllerDeviceCommand {
+  oneof command {
+    // Common commands
+    SystemInfoRequest system_info = 1; // Response: SystemInfoResponse
+    PingCommand ping = 2; // Response: CommandResult
+    ResetCommand reset = 3; // Response: CommandResult
+    IdentifyCommand identify = 4; // Response: CommandResult
+
+    // BLDC Controller-specific commands
+    BLDCControllerGetStateRequest get_state = 10; // Response: BLDCControllerState
+  }
+}
+
+// ===== BLDC Controller-Specific Commands =====
+
+// Response: BLDCControllerState
+message BLDCControllerGetStateRequest {}
+
+// Current BLDC controller state
+message BLDCControllerState {
+  sint32 left_joystick_y = 1; // Left joystick Y-axis value
+  sint32 right_joystick_y = 2; // Right joystick Y-axis value
+  uint32 buttons = 3; // Bitmask of button states (bits 0-3)
+}

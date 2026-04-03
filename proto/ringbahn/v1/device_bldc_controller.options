@@ -1,0 +1,2 @@
+# device_bldc_controller.options - nanopb options for BLDC controller messages
+# No special field size constraints needed for this simple protocol
