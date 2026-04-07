@@ -1,0 +1,79 @@
+syntax = "proto3";
+
+package ringbahn.v2;
+
+// ============================================================================
+// Subscription Commands
+// ============================================================================
+//
+// The subscription system replaces v1's polling model. Instead of the PC
+// repeatedly asking "what's your state?" (GetStateRequest), devices push
+// data when values change beyond a configurable hysteresis threshold.
+//
+// FLOW:
+//   1. PC sends SubscribeRequest to a device (via BridgeCommand, dst_uuid = device)
+//   2. Bridge translates to CAN command 0x05 (SUBSCRIBE) on device's CMD_RX
+//   3. Device enables event emission for the requested channels
+//   4. When a channel value changes beyond its hysteresis threshold,
+//      the device sends a single CAN frame on that channel's data ID
+//   5. Bridge receives the CAN frame, wraps it in DeviceEvent, sends to PC
+//      as an unsolicited Ringbahn frame (message_id = 0x0000)
+//
+// CHANNEL MAPPING (per device type):
+//   SDADC:          bits 0-7 = current ch0-7, bits 8-11 = voltage ch0-3  (12 channels)
+//   ADC Controller: bit 0 = left joystick, bit 1 = right joystick, bit 2 = switches  (3 channels)
+//   Modbus:         bits 0-15 = poll slots 0-15  (16 channels)
+//   BLDC:           N/A (command-driven, no subscriptions)
+//   Digital Output: N/A (command-driven, no subscriptions)
+//
+// ADDITIVE SEMANTICS:
+//   Subscribing to new channels does NOT unsubscribe from existing ones.
+//   To unsubscribe, send an explicit UnsubscribeRequest.
+//
+
+// Subscribe to data channels on a device.
+// Response: CommandResult
+//
+// CAN mapping:
+//   CMD_RX byte 0x05: [channel_mask:4 LE]
+//   CMD_TX: [0x05][0x00] (echo command, status OK)
+message SubscribeRequest {
+  // Bitmask of channels to subscribe to (additive).
+  // 32-bit field supports up to 30 data channels per device.
+  // Example: 0x00FF = subscribe to channels 0-7 (SDADC current channels).
+  uint32 channel_mask = 1;
+}
+
+// Unsubscribe from data channels on a device.
+// Response: CommandResult
+//
+// CAN mapping:
+//   CMD_RX byte 0x06: [channel_mask:4 LE]
+//   CMD_TX: [0x06][0x00] (echo command, status OK)
+message UnsubscribeRequest {
+  // Bitmask of channels to unsubscribe from.
+  // Only the specified channels are unsubscribed; others remain active.
+  uint32 channel_mask = 1;
+}
+
+// Set the hysteresis threshold for a specific channel.
+// Response: CommandResult
+//
+// CAN mapping:
+//   CMD_RX byte 0x07: [channel:1][threshold:2 LE]
+//   CMD_TX: [0x07][0x00] (echo command, status OK)
+//
+// Hysteresis controls how much a value must change from the last reported
+// value before the device emits a new event:
+//   threshold = 0:   emit on every change (highest bus load, use sparingly)
+//   threshold = 100: emit when value changes by >= 100 native units
+//
+// Native units depend on the channel type:
+//   SDADC current channels: microamps (uA)
+//   SDADC voltage channels: millivolts (mV)
+//   ADC controller joystick: millivolts (mV)
+//   ADC controller switches: N/A (always emit on any change, threshold ignored)
+message SetHysteresisRequest {
+  uint32 channel = 1;      // Channel index (0-29)
+  uint32 threshold = 2;    // Threshold in native units
+}

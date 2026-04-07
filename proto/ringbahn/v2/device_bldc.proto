@@ -1,0 +1,55 @@
+syntax = "proto3";
+
+package ringbahn.v2;
+
+// ============================================================================
+// BLDC Motor Commands
+// ============================================================================
+//
+// The BLDC device (DEVICE_TYPE_BLDC) controls two brushless DC motor channels
+// via PWM + H-bridge drivers. It is purely command-driven -- no subscriptions.
+//
+// TIMEOUT SAFETY:
+//   If the device receives no MOVEMENT command for 1500ms, it automatically
+//   stops both motors and pushes a BLDCStateEvent (see events.proto) with
+//   tracks_active=false and both speeds = 0.
+//   The PC must send periodic movement commands to keep motors running.
+//   PingCommand also resets the timeout watchdog.
+//
+// CAN MAPPING:
+//   BLDCMovementCommand      -> CMD_RX byte 0x20: [ch1_speed:1 signed][ch2_speed:1 signed]
+//   BLDCEmergencyStopCommand -> CMD_RX byte 0x21: (no payload)
+//   BLDCMovementAck          <- CMD_TX byte 0x20: [0x00][ch1_actual:1][ch2_actual:1]
+//
+
+// Command the motor speeds on both channels simultaneously.
+// Response: BLDCMovementAck (echoes the actual applied speeds)
+//
+// Speed values are signed percentages of maximum RPM:
+//   -100 = full reverse
+//      0 = stopped
+//   +100 = full forward
+//
+// The device clamps out-of-range values to [-100, +100].
+// Sending this command resets the 1500ms timeout watchdog.
+message BLDCMovementCommand {
+  sint32 ch1_speed = 1; // Channel 1 target speed (-100 to +100)
+  sint32 ch2_speed = 2; // Channel 2 target speed (-100 to +100)
+}
+
+// Immediately stop all motors. Equivalent to BLDCMovementCommand { 0, 0 }
+// but semantically distinct -- indicates an emergency condition.
+// Also resets the timeout watchdog.
+// Response: CommandResult
+message BLDCEmergencyStopCommand {}
+
+// Response to BLDCMovementCommand.
+// Echoes the actual speeds applied by the motor controller.
+// These may differ from the requested speeds if the device applied:
+//   - Value clamping (request > 100 or < -100)
+//   - Ramp rate limiting (gradual acceleration)
+//   - Current limiting (motor overload protection)
+message BLDCMovementAck {
+  sint32 ch1_actual = 1; // Actual applied speed for channel 1
+  sint32 ch2_actual = 2; // Actual applied speed for channel 2
+}

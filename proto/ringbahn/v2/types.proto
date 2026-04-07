@@ -1,0 +1,50 @@
+syntax = "proto3";
+
+package ringbahn.v2;
+
+import "ringbahn/v2/enums.proto";
+
+// 6-byte device identifier, assigned at manufacturing.
+// Matches the UUID carried in the Ringbahn frame header (src_uuid / dst_uuid).
+// This is the primary way the PC identifies devices -- CAN short IDs are never
+// exposed to the application layer.
+//
+// Typically read from the STM32's unique device ID register (96-bit UID,
+// truncated/hashed to 6 bytes).
+message DeviceUUID {
+  bytes value = 1; // Exactly 6 bytes
+}
+
+// Generic command response used by most request/response pairs.
+// Indicates success or failure with an optional error code and detail string.
+//
+// Error codes are context-dependent but follow common patterns:
+//   0 = no error (success=true)
+//   1 = unknown command (device doesn't recognize the command byte)
+//   2 = invalid parameter (out-of-range value, wrong channel, etc.)
+//   3 = device busy (e.g. modbus transaction in progress)
+//   4 = CAN timeout (bridge couldn't reach device within deadline)
+//   5 = unknown device UUID (dst_uuid not in bridge's device table)
+//   6 = command not valid for device type (e.g. BLDC command to SDADC)
+message CommandResult {
+  bool   success = 1;
+  uint32 error_code = 2;
+  string detail = 3;     // Optional human-readable error description (may be empty)
+}
+
+// GPS location and telemetry data.
+// Populated by mobile hubs with GPS hardware (e.g. u-blox module).
+// All fields default to zero/false if no GPS fix is available.
+message GPSState {
+  float  latitude = 1;   // Decimal degrees (positive = north)
+  float  longitude = 2;  // Decimal degrees (positive = east)
+  float  altitude = 3;   // Meters above sea level
+  float  speed = 4;      // Speed in m/s
+  float  heading = 5;    // Heading in degrees (0 = north, 90 = east)
+  uint32 satellites = 6; // Number of satellites used for the fix
+  bool   has_fix = 7;    // true if GPS has a valid position fix
+}
+
+// Empty response indicating success where no data needs to be returned.
+// Used by Terraboot commands and other operations where success is binary.
+message AcknowledgeResponse {}

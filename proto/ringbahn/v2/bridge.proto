@@ -1,0 +1,324 @@
+syntax = "proto3";
+
+package ringbahn.v2;
+
+import "ringbahn/v2/common.proto";
+import "ringbahn/v2/subscription.proto";
+import "ringbahn/v2/events.proto";
+import "ringbahn/v2/device_bldc.proto";
+import "ringbahn/v2/device_digital_output.proto";
+import "ringbahn/v2/device_modbus.proto";
+import "ringbahn/v2/device_routing.proto";
+import "ringbahn/v2/types.proto";
+
+// ============================================================================
+// Top-Level Protocol Envelope
+// ============================================================================
+//
+// Every Ringbahn payload on the bridge <-> PC link is exactly one of three
+// top-level messages:
+//
+//   1. BridgeCommand  -- PC -> Bridge (request, message_id > 0)
+//   2. BridgeResponse -- Bridge -> PC (response to a command, same message_id)
+//   3. DeviceEvent    -- Bridge -> PC (unsolicited push, message_id = 0x0000)
+//
+// DEVICE ADDRESSING:
+//   Device identity is carried in the Ringbahn frame header, NOT in protobuf:
+//
+//   Ringbahn frame format (unchanged from v1):
+//     [0xA5][msg_id:2][payload_len:2][src_uuid:6][dst_uuid:6][payload:N][crc:2]
+//
+//   For commands:  dst_uuid = target device UUID (or bridge UUID for local cmds)
+//   For responses: src_uuid = device that responded (or bridge UUID)
+//   For events:    src_uuid = device that generated the event (or bridge UUID
+//                  for bridge-generated events like DevicePresenceEvent)
+//
+//   The bridge maintains a UUID <-> CAN short_id mapping table from admin
+//   discovery. It translates between UUIDs and CAN IDs transparently.
+//   The PC never sees CAN short IDs.
+//
+// WHY A UNIFIED ENVELOPE?
+//   In v1, each device type had its own top-level command wrapper
+//   (BLDCDeviceCommand, ModbusBridgeDeviceCommand, ADCDeviceCommand, etc.).
+//   The PC needed to know which wrapper to use per device type.
+//
+//   In v2, the PC always sends BridgeCommand -- the bridge validates that the
+//   command is appropriate for the target device type (looked up from dst_uuid)
+//   and returns CommandResult { success=false, error_code=6 } if mismatched.
+//   This simplifies PC-side code: one message type to construct, one to parse.
+//
+// UUID IN PROTOBUF -- TWO EXCEPTIONS:
+//   Normally, device UUIDs only appear in the Ringbahn frame header.
+//   Two message types include UUIDs in the protobuf payload because the frame
+//   header alone isn't sufficient:
+//
+//   1. Terraboot commands (TerrabootEnterRequest, etc.)
+//      dst_uuid = bridge UUID (command goes TO the bridge for proxying)
+//      device_uuid in proto = the CAN device to bootload
+//      Without this, the bridge wouldn't know which CAN device to target.
+//
+//   2. DevicePresenceEvent
+//      src_uuid = bridge UUID (bridge generated this event)
+//      device_uuid in proto = the device that appeared/disappeared
+//      Without this, the PC wouldn't know which device the event is about.
+//
+
+// ============================================================================
+// BridgeCommand -- PC -> Bridge (request)
+// ============================================================================
+//
+// Sent by the PC inside a Ringbahn frame with message_id > 0.
+//
+// ROUTING:
+//   The bridge reads dst_uuid from the Ringbahn frame header to determine
+//   where to route the command:
+//     - dst_uuid matches bridge's own UUID -> handle locally (discovery, OTA, etc.)
+//     - dst_uuid matches a known device   -> translate to raw CAN and forward
+//     - dst_uuid unknown                  -> return error_code=5 (unknown device)
+//
+// COMMAND VALIDATION:
+//   The bridge knows each device's type from admin discovery. If a command is
+//   inappropriate for the device type (e.g. BLDCMovementCommand sent to an SDADC),
+//   the bridge returns CommandResult { success=false, error_code=6 }.
+//
+// FLOW:
+//   1. PC sends BridgeCommand in Ringbahn frame (msg_id=N, dst_uuid=<device>)
+//   2. Bridge decodes protobuf, translates to raw CAN frame(s)
+//   3. Bridge sends CAN frame(s) on device's CMD_RX channel
+//   4. Device responds with raw CAN frame(s) on CMD_TX
+//   5. Bridge encodes response as BridgeResponse
+//   6. Bridge sends Ringbahn frame (msg_id=N, src_uuid=<device>)
+//
+message BridgeCommand {
+  oneof command {
+    // --- Common device commands (any device type) ---
+    // Forwarded to the device's CMD_RX channel as CAN bytes 0x01-0x04.
+    PingCommand              ping = 2;              // -> CommandResult
+    SystemInfoRequest        system_info = 3;       // -> SystemInfoResponse
+    ResetCommand             reset = 4;             // -> CommandResult
+    IdentifyCommand          identify = 5;          // -> CommandResult
+
+    // --- Subscription management (SDADC, ADC Controller, Modbus) ---
+    // Forwarded to device's CMD_RX as CAN bytes 0x05-0x07.
+    // Invalid for BLDC and Digital Output (returns error_code=6).
+    SubscribeRequest         subscribe = 10;        // -> CommandResult
+    UnsubscribeRequest       unsubscribe = 11;      // -> CommandResult
+    SetHysteresisRequest     set_hysteresis = 12;   // -> CommandResult
+
+    // --- BLDC motor commands (DEVICE_TYPE_BLDC only) ---
+    // Forwarded as CAN bytes 0x20-0x21 on CMD_RX.
+    BLDCMovementCommand      bldc_movement = 20;    // -> BLDCMovementAck
+    BLDCEmergencyStopCommand bldc_emergency_stop = 21; // -> CommandResult
+
+    // --- Digital output commands (DEVICE_TYPE_DIGITAL_OUT only) ---
+    // Forwarded as CAN bytes 0x20-0x21 on CMD_RX.
+    SetPWMChannelRequest     set_pwm_channel = 30;  // -> CommandResult
+    SetAllChannelsRequest    set_all_channels = 31; // -> CommandResult
+
+    // --- Modbus bridge commands (DEVICE_TYPE_RS485_BRIDGE only) ---
+    // Bridge translates into CAN bytes 0x20-0x2E on CMD_RX.
+    // For multi-register writes, the bridge handles CAN multi-frame staging
+    // (START/DATA/EXEC) transparently -- PC sends one protobuf message.
+    ModbusReadRequest                   modbus_read = 40;            // -> ModbusReadResponse
+    ModbusWriteCoilRequest              modbus_write_coil = 41;      // -> CommandResult
+    ModbusWriteRegisterRequest          modbus_write_register = 42;  // -> CommandResult
+    ModbusWriteMultipleRegistersRequest modbus_write_multiple = 43;  // -> CommandResult
+    ModbusSetPollRequest                modbus_set_poll = 44;        // -> CommandResult
+    ModbusClearPollRequest              modbus_clear_poll = 45;      // -> CommandResult
+    ModbusGetPollsRequest               modbus_get_polls = 46;       // -> ModbusPollConfigResponse
+    ModbusConfigureUartRequest          modbus_configure_uart = 47;  // -> CommandResult
+
+    // Modbus timeout safety (DEVICE_TYPE_RS485_BRIDGE only)
+    ModbusSetTimeoutCommandsRequest     modbus_set_timeout = 48;     // -> CommandResult
+    ModbusClearTimeoutCommandsRequest   modbus_clear_timeout = 49;   // -> CommandResult
+    ModbusGetTimeoutConfigRequest       modbus_get_timeout = 50;     // -> ModbusTimeoutConfigResponse
+
+    // --- Bridge-local commands (dst_uuid = bridge's own UUID) ---
+    // Handled by the bridge, not forwarded to CAN.
+    GetAttachedDevicesRequest  get_attached_devices = 60; // -> AttachedDevicesResponse
+    GetBridgeStateRequest      get_bridge_state = 61;     // -> BridgeState
+    BootloaderCommand          bootloader = 62;           // -> CommandResult
+
+    // --- Bridge firmware OTA (dst_uuid = bridge's own UUID) ---
+    // Updates the bridge itself. Identical semantics to v1.
+    InternalOtaBeginRequest    ota_begin = 70;   // -> InternalOtaStatus
+    InternalOtaWriteRequest    ota_write = 71;   // -> InternalOtaStatus
+    InternalOtaEndRequest      ota_end = 72;     // -> InternalOtaStatus
+    InternalOtaAbortRequest    ota_abort = 73;   // -> InternalOtaStatus
+    InternalOtaSetBootRequest  ota_set_boot = 74; // -> InternalOtaStatus
+
+    // --- Terraboot CAN bootloader (dst_uuid = bridge's own UUID) ---
+    // Bridge proxies bootloader commands to CAN devices.
+    // Target device identified by device_uuid INSIDE the protobuf message
+    // (not by dst_uuid, which points to the bridge).
+    TerrabootEnterRequest        terraboot_enter = 80;    // -> AcknowledgeResponse
+    TerrabootConnectRequest      terraboot_connect = 81;  // -> TerrabootConnectResponse
+    TerrabootSendBlockRequest    terraboot_send = 82;     // -> TerrabootSendBlockResponse
+    TerrabootEofRequest          terraboot_eof = 83;      // -> TerrabootEofResponse
+    TerrabootRequestBlockRequest terraboot_request = 84;  // -> TerrabootRequestBlockResponse
+    TerrabootCompleteRequest     terraboot_complete = 85; // -> TerrabootCompleteResponse
+    TerrabootGetIdRequest        terraboot_get_id = 86;   // -> TerrabootGetIdResponse
+    TerrabootIdentifyRequest     terraboot_identify = 87; // -> TerrabootIdentifyResponse
+  }
+}
+
+// ============================================================================
+// BridgeResponse -- Bridge -> PC (response to a command)
+// ============================================================================
+//
+// Sent by the bridge in response to a BridgeCommand. The Ringbahn frame
+// carries the same message_id as the original command for correlation.
+//
+// ADDRESSING:
+//   src_uuid in the Ringbahn frame = the device that was commanded
+//   (or bridge UUID for bridge-local commands).
+//
+// ERROR HANDLING:
+//   If the bridge can't reach the device (unknown UUID, CAN timeout, etc.),
+//   it returns CommandResult { success=false } with an appropriate error_code.
+//   The PC never receives raw CAN errors -- the bridge always wraps errors
+//   in a structured protobuf response.
+//
+//   Common error codes:
+//     4 = CAN timeout (device didn't respond)
+//     5 = unknown device UUID (not in bridge's discovery table)
+//     6 = command not valid for this device type
+//
+message BridgeResponse {
+  oneof response {
+    // Generic success/error (used by most commands: ping, reset, identify,
+    // subscribe, set_hysteresis, emergency_stop, set_pwm, modbus writes, etc.)
+    CommandResult            result = 2;
+
+    // System info (response to SystemInfoRequest)
+    // Bridge reassembles the 2-frame CAN response transparently.
+    SystemInfoResponse       system_info = 3;
+
+    // BLDC movement acknowledgement (includes actual applied speeds)
+    BLDCMovementAck          bldc_movement_ack = 20;
+
+    // Digital output state readback
+    DigitalOutputState       digital_output_state = 30;
+
+    // Modbus responses
+    ModbusReadResponse           modbus_read = 40;
+    ModbusPollConfigResponse     modbus_polls = 46;
+    ModbusTimeoutConfigResponse  modbus_timeout = 50;
+
+    // Bridge-local responses
+    AttachedDevicesResponse   attached_devices = 60;
+    BridgeState               bridge_state = 61;
+
+    // OTA progress
+    InternalOtaStatus         ota_status = 70;
+
+    // Terraboot responses
+    TerrabootConnectResponse      terraboot_connect = 81;
+    TerrabootSendBlockResponse    terraboot_send = 82;
+    TerrabootEofResponse          terraboot_eof = 83;
+    TerrabootRequestBlockResponse terraboot_request = 84;
+    TerrabootGetIdResponse        terraboot_get_id = 86;
+    TerrabootIdentifyResponse     terraboot_identify = 87;
+    AcknowledgeResponse           acknowledge = 90;
+  }
+}
+
+// ============================================================================
+// DeviceEvent -- Bridge -> PC (unsolicited push)
+// ============================================================================
+//
+// Sent by the bridge when a subscribed device pushes data on a CAN event
+// channel, or when the bridge itself generates a synthetic event.
+//
+// FRAMING:
+//   message_id = 0x0000 (reserved for unsolicited events)
+//   The PC distinguishes events from responses by checking message_id:
+//     message_id > 0  -> BridgeResponse (correlated to a pending command)
+//     message_id == 0 -> DeviceEvent (unsolicited)
+//
+// ADDRESSING:
+//   src_uuid in the Ringbahn frame = device that generated the data.
+//   For bridge-generated events (DevicePresenceEvent): src_uuid = bridge UUID,
+//   and the actual device identity is in the event message itself.
+//
+// WHEN EVENTS ARE SENT:
+//   - Data events (SDADC, joystick, switch, modbus poll):
+//     After the PC subscribes to channels on a device, that device pushes raw
+//     CAN frames whenever values change beyond hysteresis. The bridge receives
+//     these frames, wraps them in DeviceEvent, and forwards to the PC.
+//
+//   - State events (BLDC, digital output):
+//     Pushed by the device when its state changes autonomously (e.g. BLDC
+//     timeout auto-stop). NOT sent in response to commands.
+//
+//   - Presence events:
+//     Generated by the bridge from heartbeat monitoring (CAN ID 0x700 + short_id).
+//     Sent when a device appears (first heartbeat after discovery) or disappears
+//     (consecutive missed heartbeats).
+//
+//   - Modbus poll events:
+//     The bridge reassembles multi-frame CAN bursts from the modbus device
+//     into a single complete ModbusPollResultEvent before forwarding.
+//
+// SEQUENCE COUNTER:
+//   Each channel on each device has an independent 8-bit sequence counter.
+//   Copied from the raw CAN frame's sequence byte into DeviceEvent.sequence.
+//   The PC can detect dropped events by checking for gaps:
+//     expected: 5, received: 7 -> one event was dropped (6 is missing)
+//   Counter wraps from 255 -> 0. A gap means the CAN bus or bridge dropped frames
+//   (bus overload, buffer overflow, etc.).
+//
+message DeviceEvent {
+  // Channel index within the device's 32-ID CAN block (0-29).
+  // Maps to CAN data channel: CAN ID = base_id + 0x02 + channel.
+  //   channel 0 -> CAN ID base+0x02
+  //   channel 1 -> CAN ID base+0x03
+  //   ...
+  //   channel 29 -> CAN ID base+0x1F
+  //
+  // For bridge-generated events (presence), channel is always 0.
+  uint32 channel = 1;
+
+  // Per-channel sequence counter (0-255, wraps).
+  // Copied from the raw CAN frame's sequence byte.
+  // Use to detect dropped events (gaps in the sequence).
+  uint32 sequence = 2;
+
+  oneof event {
+    // --- Sensor data events ---
+
+    // SDADC channel value update (one per channel per event).
+    // src_uuid in frame identifies which SDADC device.
+    // DeviceEvent.channel identifies which measurement channel (0-11).
+    SDADCChannelEvent        sdadc = 10;
+
+    // ADC controller joystick position update.
+    // channel 0 = left joystick, channel 1 = right joystick.
+    JoystickEvent            joystick = 20;
+
+    // ADC controller switch state change.
+    // channel 2 = switches (bitmask of all switch states).
+    SwitchEvent              switches = 21;
+
+    // --- Autonomous state change events ---
+
+    // BLDC motor state changed without a command (e.g. timeout auto-stop).
+    BLDCStateEvent           bldc_state = 30;
+
+    // Digital output state changed autonomously (reserved for future use).
+    DigitalOutputStateEvent  digital_output_state = 40;
+
+    // --- Modbus events ---
+
+    // Modbus poll slot completed a read cycle (bridge reassembled multi-frame burst).
+    // src_uuid in frame identifies which modbus bridge device.
+    ModbusPollResultEvent    modbus_poll = 50;
+
+    // --- Bridge-generated events ---
+
+    // Device appeared or disappeared on the CAN bus.
+    // SPECIAL: src_uuid in frame = bridge UUID (bridge generated this).
+    // The device identity is in DevicePresenceEvent.device_uuid.
+    DevicePresenceEvent      presence = 60;
+  }
+}

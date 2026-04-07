@@ -1,0 +1,51 @@
+syntax = "proto3";
+
+package ringbahn.v2;
+
+// Device variant types. Assigned at firmware build time.
+// The bridge discovers device types during admin enumeration on the CAN bus.
+enum DeviceType {
+  DEVICE_TYPE_UNSPECIFIED = 0;       // Unknown or uninitialized
+  DEVICE_TYPE_ROUTING = 1;          // PC-CAN bridge (routing device). Was HUB in v1.
+  DEVICE_TYPE_NODE = 2;             // Generic node (reserved for future use)
+  DEVICE_TYPE_SD_ADC = 3;           // Sigma-delta ADC (AD4111-based, 8 current + 4 voltage)
+  DEVICE_TYPE_DIGITAL_OUT = 4;      // PWM output bridge (8 channels, MCP4131)
+  DEVICE_TYPE_RS485_BRIDGE = 5;     // Modbus RTU bridge (RS485 UART to CAN)
+  DEVICE_TYPE_BLDC = 6;             // Brushless DC motor controller (2 channels)
+  DEVICE_TYPE_BLDC_CONTROLLER = 7;  // Joystick/button controller for BLDC board
+  DEVICE_TYPE_TERRABOOT = 254;      // Device is in bootloader mode (no application running)
+}
+
+// RS485 UART baud rate options for modbus bridge configuration.
+enum SerialBaudRate {
+  BAUD_1200 = 0;
+  BAUD_2400 = 1;
+  BAUD_4800 = 2;
+  BAUD_9600 = 3;
+  BAUD_19200 = 4;   // Default for most modbus slaves
+  BAUD_38400 = 5;
+  BAUD_57600 = 6;
+  BAUD_115200 = 7;
+}
+
+// UART parity options.
+enum SerialParity {
+  PARITY_NONE = 0;  // Default
+  PARITY_ODD = 1;
+  PARITY_EVEN = 2;
+}
+
+// UART stop bit options.
+enum SerialStopBits {
+  STOPBITS_1 = 0;   // Default
+  STOPBITS_2 = 1;
+}
+
+// Modbus function codes for read operations.
+// Used in ModbusReadRequest and ModbusSetPollRequest.
+enum ModbusFunction {
+  MODBUS_READ_COILS = 0;              // FC 0x01 - Read coils
+  MODBUS_READ_DISCRETE_INPUTS = 1;    // FC 0x02 - Read discrete inputs
+  MODBUS_READ_HOLDING_REGISTERS = 2;  // FC 0x03 - Read holding registers
+  MODBUS_READ_INPUT_REGISTERS = 3;    // FC 0x04 - Read input registers
+}

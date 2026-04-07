@@ -1,0 +1,196 @@
+syntax = "proto3";
+
+package ringbahn.v2;
+
+import "ringbahn/v2/enums.proto";
+import "ringbahn/v2/types.proto";
+
+// ============================================================================
+// SDADC Channel Event
+// ============================================================================
+//
+// Emitted by SDADC devices (DEVICE_TYPE_SD_ADC) when a subscribed channel's
+// value changes beyond its hysteresis threshold.
+//
+// One event per channel per update -- NOT batched like v1's ADCState which
+// returned all channels in one protobuf. This is the key change: each channel
+// is independent and only fires when its own value changes.
+//
+// CAN frame format (4 bytes on data channel +0x02+channel):
+//   [value:2 LE][status_flags:1][sequence:1]
+//
+// Bridge unpacks the raw CAN bytes into the protobuf fields below.
+//
+// CHANNEL INTERPRETATION (determined by DeviceEvent.channel):
+//   Channels 0-7  (CAN data IDs base+0x02 to base+0x09): Current in microamps (uA)
+//   Channels 8-11 (CAN data IDs base+0x0A to base+0x0D): Voltage in millivolts (mV)
+//
+message SDADCChannelEvent {
+  // Measured value in native units:
+  //   Current channels (0-7): microamps (uA), signed
+  //     (can be negative for bidirectional current sensors)
+  //   Voltage channels (8-11): millivolts (mV)
+  int32 value = 1;
+
+  // Status flags bitfield from the AD4111 diagnostic register:
+  //   bit 0 (0x01): valid      -- measurement is within normal operating range
+  //   bit 1 (0x02): open_line  -- sensor wire disconnected (AD4111 open-wire detect)
+  //   bit 2 (0x04): out_of_range -- value exceeds sensor range (ADC saturation)
+  //
+  // A healthy reading has status_flags = 0x01 (valid bit set, no faults).
+  // If open_line is set, the value field is unreliable.
+  uint32 status_flags = 2;
+}
+
+// ============================================================================
+// ADC Controller Joystick Event
+// ============================================================================
+//
+// Emitted by ADC controller devices (DEVICE_TYPE_BLDC_CONTROLLER) when a
+// joystick position changes beyond hysteresis.
+//
+// Two joystick channels:
+//   channel 0 = left Y-axis joystick
+//   channel 1 = right Y-axis joystick
+//
+// CAN frame format (4 bytes on data channel +0x02+channel):
+//   [raw_mv:2 LE][mapped_speed:2 LE (signed)]
+//
+message JoystickEvent {
+  // Raw ADC reading in millivolts (0-3300 typical for 3.3V reference).
+  // This is the unprocessed value from the ADC, useful for calibration.
+  uint32 raw_mv = 1;
+
+  // Mapped speed value after deadzone removal and calibration.
+  // Range: -100 (full reverse) to +100 (full forward), 0 = center/deadzone.
+  // Ready to be forwarded to a BLDC movement command.
+  sint32 mapped_speed = 2;
+}
+
+// ============================================================================
+// ADC Controller Switch Event
+// ============================================================================
+//
+// Emitted by ADC controller devices when any switch state changes.
+// Always on channel 2 in the ADC controller's channel map.
+//
+// CAN frame format (1 byte on data channel +0x04):
+//   [switch_bitmask:1]
+//
+// Switch events have no hysteresis -- any state change triggers an event.
+//
+message SwitchEvent {
+  // Bitmask of current switch states.
+  // Each bit represents one switch: 1 = pressed/active, 0 = released.
+  // Bits 0-3 are used on current hardware (4 momentary switches).
+  // Bits 4-7 are reserved for future expansion.
+  uint32 switch_bitmask = 1;
+}
+
+// ============================================================================
+// BLDC State Event
+// ============================================================================
+//
+// Emitted by BLDC motor devices (DEVICE_TYPE_BLDC) when motor state changes
+// autonomously -- i.e., WITHOUT a command from the PC.
+//
+// Primary use case: timeout auto-stop. If the device receives no MOVEMENT
+// command for 1500ms, it stops both motors and pushes this event with
+// tracks_active=false, speeds=0.
+//
+// This event is NOT emitted in response to movement commands (those get
+// BLDCMovementAck as a synchronous response instead).
+//
+message BLDCStateEvent {
+  bool   tracks_active = 1;    // true if any motor is still running
+  sint32 ch1_actual_speed = 2; // Current speed of channel 1 (-100 to +100, 0 after auto-stop)
+  sint32 ch2_actual_speed = 3; // Current speed of channel 2
+}
+
+// ============================================================================
+// Digital Output State Event
+// ============================================================================
+//
+// Emitted by digital output devices (DEVICE_TYPE_DIGITAL_OUT) when channel
+// states change autonomously (without a command from the PC).
+//
+// Currently no autonomous behavior is defined for digital output devices,
+// but this event type is reserved for future timeout safety features
+// (e.g., auto-zero all channels on communication loss).
+//
+message DigitalOutputStateEvent {
+  // Current duty cycle of all channels.
+  // 1 byte per channel (0-255): byte[0] = channel 0, byte[1] = channel 1, etc.
+  bytes packed_duty_cycles = 1;
+}
+
+// ============================================================================
+// Modbus Poll Result Event
+// ============================================================================
+//
+// Emitted when a configured poll slot on a modbus bridge device completes
+// a read cycle and the values have changed since the last poll.
+//
+// The bridge reassembles multi-frame CAN bursts into a single complete event.
+// The PC never sees individual CAN frames -- it receives one event with all
+// register data for the poll slot.
+//
+// CAN frame format (multi-frame burst on data channel +0x02+slot):
+//   [slot:1][frame_idx:1][data:6]  -- 3 registers per frame (6 bytes)
+//   frame_idx 0xFF = end-of-burst marker
+//
+// The bridge buffers frames until it sees the end marker (or receives all
+// expected frames based on the poll slot's quantity), then emits this event.
+//
+message ModbusPollResultEvent {
+  uint32 slot = 1;          // Poll slot index (0-15) that produced this result
+  uint32 slave_address = 2; // Modbus slave address that was polled
+  uint32 start_address = 3; // Starting register address of the poll range
+
+  // Raw register values from the modbus slave.
+  // 2 bytes per register, little-endian byte order.
+  // Length = 2 * quantity (from the poll slot configuration).
+  // Example: 12 registers = 24 bytes.
+  bytes register_data = 4;
+
+  // Error indicator. true if the modbus read failed (slave timeout,
+  // exception response, CRC error, etc.). When true, register_data is
+  // empty and error_code contains the reason.
+  bool error = 5;
+
+  // Modbus exception code (only meaningful when error=true):
+  //   1 = illegal function
+  //   2 = illegal data address
+  //   3 = illegal data value
+  //   4 = slave device failure
+  //   0xFF = timeout (no response from slave)
+  uint32 error_code = 6;
+}
+
+// ============================================================================
+// Device Presence Event (bridge-generated)
+// ============================================================================
+//
+// Generated by the bridge when it detects a device appearing or disappearing
+// on the CAN bus via heartbeat monitoring.
+//
+// Heartbeat: Each device sends a periodic CAN frame on ID 0x700 + short_id.
+// The bridge monitors these to detect device presence.
+//
+// SPECIAL ADDRESSING:
+//   src_uuid in the Ringbahn frame = bridge's own UUID (the bridge generated this).
+//   The device that appeared/disappeared is identified by device_uuid in this message.
+//   This is one of two places where a UUID appears in protobuf (the other is
+//   Terraboot commands). See bridge.proto header comment for rationale.
+//
+// TIMING:
+//   Appearance: Sent after the bridge discovers the device via admin enumeration,
+//     assigns a short_id, and identifies the device type.
+//   Disappearance: Sent after the bridge detects consecutive missed heartbeats
+//     (implementation-defined threshold, typically 3-5 missed at 1Hz = 3-5 seconds).
+//
+message DevicePresenceEvent {
+  DeviceType device_type = 1;  // Type of the device (SDADC, BLDC, etc.)
+  DeviceUUID device_uuid = 2;  // 6-byte UUID of the device that appeared/disappeared
+  bool       online = 3;       // true = device appeared, false = device lost (heartbeat timeout)
+}

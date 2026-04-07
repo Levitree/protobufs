@@ -1,0 +1,270 @@
+syntax = "proto3";
+
+package ringbahn.v2;
+
+import "ringbahn/v2/enums.proto";
+
+// ============================================================================
+// Modbus Bridge Commands
+// ============================================================================
+//
+// The modbus bridge device (DEVICE_TYPE_RS485_BRIDGE) connects to Modbus RTU
+// slaves via RS485 UART. It supports three modes of operation:
+//
+//   1. DIRECT READS -- PC sends a read request, bridge forwards to modbus slave,
+//      returns the response. For reads of >3 registers, the modbus device sends
+//      multi-frame CAN responses which the routing bridge reassembles.
+//
+//   2. DIRECT WRITES -- Single register/coil writes are single CAN frames.
+//      Multi-register writes (Modbus FC 0x10) are staged across multiple CAN
+//      frames (START -> DATA -> EXEC). The routing bridge handles this staging
+//      transparently -- the PC sends one protobuf message with all values.
+//
+//   3. POLL SLOTS -- Autonomous periodic reads. The PC configures up to 16 poll
+//      slots, each reading a range of registers from a slave at a configurable
+//      interval. Results are pushed as ModbusPollResultEvent (see events.proto).
+//      The modbus device caches last-seen values per slot and only pushes when
+//      register values actually change (change detection on device).
+//
+// TIMEOUT SAFETY:
+//   The modbus bridge can store up to 8 "timeout commands" (writes) that execute
+//   automatically if the PC stops sending commands (including pings). This ensures
+//   safe shutdown of connected equipment if the PC crashes.
+//   Example: "if we lose comms, write 0 to the VFD speed register."
+//
+
+// ============================================================================
+// UART Configuration
+// ============================================================================
+
+// Configure the RS485 UART port parameters.
+// Must be called before any modbus operations if defaults don't match the slave.
+// Response: CommandResult
+//
+// CAN mapping: CMD_RX byte 0x23: [baud:1][parity:1][stop_bits:1]
+message ModbusConfigureUartRequest {
+  SerialBaudRate baud_rate = 1; // Default: BAUD_19200
+  SerialParity   parity = 2;   // Default: PARITY_NONE
+  SerialStopBits stop_bits = 3; // Default: STOPBITS_1
+}
+
+// ============================================================================
+// Direct Read
+// ============================================================================
+
+// Read registers or coils from a modbus slave.
+// Response: ModbusReadResponse
+//
+// For reads of 1-3 registers, the modbus device responds in a single CAN frame
+// on CMD_TX. For reads of 4+ registers, the device sends multiple CAN frames on
+// data channel +0x12, which the routing bridge reassembles before encoding the
+// protobuf response.
+//
+// CAN mapping:
+//   CMD_RX byte 0x20: [slave:1][func:1][addr:2 LE][qty:2 LE][seq:1]
+//   CMD_TX (small): [0x20][0x00][data...]
+//   Data channel +0x12 (large): [seq:1][frame_idx:1][data:6]
+message ModbusReadRequest {
+  ModbusFunction function = 1;  // Which modbus read function to use
+  uint32 slave_address = 2;     // Modbus slave address (1-247)
+  uint32 start_address = 3;     // Starting register/coil address
+  uint32 quantity = 4;          // Number of registers/coils to read (1-32)
+}
+
+// Response to a ModbusReadRequest.
+message ModbusReadResponse {
+  ModbusFunction function = 1;  // Echo of the requested function
+
+  // Raw response data from the modbus slave:
+  //   For holding/input registers: 2 bytes per register, little-endian
+  //   For coils/discrete inputs: 1 bit per coil, packed into bytes (LSB first)
+  //
+  // The routing bridge reassembles multi-frame CAN responses transparently.
+  // The PC always receives the complete data in one message.
+  bytes data = 2;
+
+  // Error indicator. true if the read failed for any reason:
+  //   - Modbus slave didn't respond (timeout)
+  //   - Slave returned an exception response
+  //   - CRC error on the RS485 bus
+  // When true, data is empty and error_code contains the reason.
+  bool error = 3;
+
+  // Modbus exception code (only meaningful when error=true):
+  //   1 = illegal function code
+  //   2 = illegal data address (register doesn't exist)
+  //   3 = illegal data value
+  //   4 = slave device failure (internal error)
+  //   0xFF = timeout (no response from slave within deadline)
+  uint32 error_code = 4;
+}
+
+// ============================================================================
+// Direct Write -- Single
+// ============================================================================
+
+// Write a single coil (Modbus function code 0x05).
+// Response: CommandResult
+//
+// CAN mapping: CMD_RX byte 0x22: [slave:1][addr:2 LE][value:1]
+message ModbusWriteCoilRequest {
+  uint32 slave_address = 1; // Modbus slave address (1-247)
+  uint32 address = 2;       // Coil address
+  bool   value = 3;         // true = ON (Modbus 0xFF00), false = OFF (Modbus 0x0000)
+}
+
+// Write a single holding register (Modbus function code 0x06).
+// Response: CommandResult
+//
+// CAN mapping: CMD_RX byte 0x21: [slave:1][addr:2 LE][value:2 LE]
+message ModbusWriteRegisterRequest {
+  uint32 slave_address = 1; // Modbus slave address (1-247)
+  uint32 address = 2;       // Register address
+  uint32 value = 3;         // Register value (16-bit, stored in uint32 for proto3 compatibility)
+}
+
+// ============================================================================
+// Direct Write -- Multiple Registers
+// ============================================================================
+
+// Write multiple holding registers (Modbus function code 0x10).
+// Response: CommandResult
+//
+// MULTI-FRAME STAGING (handled transparently by routing bridge):
+//   The PC sends this single protobuf message with all register values.
+//   The routing bridge breaks it into a sequence of CAN frames:
+//     1. WRITE_MULTI_START  CMD_RX 0x28: [slave:1][addr:2 LE][qty:1][data0:2 LE]
+//     2. WRITE_MULTI_DATA   CMD_RX 0x29: [idx:1][data:6]  (3 registers per frame, repeat N times)
+//     3. WRITE_MULTI_EXEC   CMD_RX 0x2A: (no payload, triggers the actual modbus write)
+//
+//   The modbus device buffers the staged data. If EXEC is not received within
+//   500ms of START, the device discards the buffer (timeout safety).
+//
+//   Maximum: 24 registers per write (limited by device-side buffer).
+message ModbusWriteMultipleRegistersRequest {
+  uint32 slave_address = 1;  // Modbus slave address (1-247)
+  uint32 start_address = 2;  // Starting register address
+
+  // Register values to write, in order.
+  // Each value is 16-bit (stored in uint32 for proto3 compatibility).
+  // The routing bridge stages these across CAN frames (3 registers per DATA frame).
+  repeated uint32 values = 3;
+}
+
+// ============================================================================
+// Poll Slot Configuration
+// ============================================================================
+
+// Configure an autonomous poll slot.
+// Response: CommandResult
+//
+// The modbus device will read the specified registers from the slave at the
+// given interval and push results as ModbusPollResultEvent on the slot's
+// data channel. Up to 16 slots can be active simultaneously.
+//
+// Each poll slot gets its own CAN data channel ID (base+0x02+slot), so
+// poll results from different slots don't interfere with each other.
+//
+// Change detection: the device caches the last polled values per slot and
+// only pushes a new event when values differ from the cache. This prevents
+// flooding the CAN bus with identical readings.
+//
+// CAN mapping: CMD_RX byte 0x24: [slot:1][slave:1][func:1][addr:2 LE][qty:1][interval:1]
+message ModbusSetPollRequest {
+  uint32 slot = 1;           // Slot index 0-15 (each gets its own CAN data channel)
+  uint32 slave_address = 2;  // Modbus slave to poll (1-247)
+  ModbusFunction function = 3; // Read function to use
+  uint32 start_address = 4;  // Starting register address
+  uint32 quantity = 5;       // Number of registers to read per poll (1-24)
+  uint32 interval_100ms = 6; // Poll interval in 100ms units (e.g. 10 = every 1 second)
+}
+
+// Deactivate a poll slot. Stops polling and frees the slot for reuse.
+// Response: CommandResult
+//
+// CAN mapping: CMD_RX byte 0x25: [slot:1]
+message ModbusClearPollRequest {
+  uint32 slot = 1; // Slot index 0-15
+}
+
+// Query all active poll slot configurations.
+// Response: ModbusPollConfigResponse
+//
+// CAN mapping: CMD_RX byte 0x26 (no payload)
+// Response on CMD_TX: multi-frame with active slot configs
+message ModbusGetPollsRequest {}
+
+// Response to ModbusGetPollsRequest.
+// Contains the configuration of all currently active poll slots.
+message ModbusPollConfigResponse {
+  repeated ModbusPollSlotConfig active_slots = 1;
+}
+
+// Configuration of a single active poll slot.
+// Mirrors the fields from ModbusSetPollRequest.
+message ModbusPollSlotConfig {
+  uint32 slot = 1;
+  uint32 slave_address = 2;
+  ModbusFunction function = 3;
+  uint32 start_address = 4;
+  uint32 quantity = 5;
+  uint32 interval_100ms = 6;
+}
+
+// ============================================================================
+// Timeout Safety
+// ============================================================================
+
+// Configure commands to execute automatically when the bridge loses contact
+// with the PC. "Contact" = receiving any Ringbahn command. If no command is
+// received for timeout_ms milliseconds, the modbus device executes all stored
+// timeout commands sequentially.
+//
+// Response: CommandResult
+//
+// Use case: if the PC crashes while a VFD is running at speed, the timeout
+// commands can write 0 to the speed register for safe shutdown.
+//
+// CAN mapping:
+//   Individual timeout command storage: CMD_RX byte 0x2C:
+//     [idx:1][slave:1][addr:2 LE][value:2 LE]
+//   Timeout period: CMD_RX byte 0x2E: [timeout:2 LE]
+message ModbusSetTimeoutCommandsRequest {
+  // Timeout period in milliseconds. Set to 0 to disable the timeout watchdog.
+  // Default: 20000ms (20 seconds).
+  // The watchdog is reset by any incoming command (including PingCommand).
+  uint32 timeout_ms = 1;
+
+  // Up to 8 write commands to execute when the timeout fires.
+  // Commands execute in order. If any command fails (slave timeout, etc.),
+  // the remaining commands still execute (best-effort).
+  repeated ModbusTimeoutCommand commands = 2;
+}
+
+// A single write command stored for timeout execution.
+// Only single-register and single-coil writes are supported (no multi-register
+// writes in timeout commands, to keep the implementation simple).
+message ModbusTimeoutCommand {
+  oneof command {
+    ModbusWriteCoilRequest write_coil = 1;
+    ModbusWriteRegisterRequest write_register = 2;
+  }
+}
+
+// Clear all stored timeout commands and disable the timeout watchdog.
+// Response: CommandResult
+//
+// CAN mapping: CMD_RX byte 0x2D (no payload)
+message ModbusClearTimeoutCommandsRequest {}
+
+// Query the current timeout configuration and watchdog status.
+// Response: ModbusTimeoutConfigResponse
+message ModbusGetTimeoutConfigRequest {}
+
+// Response to ModbusGetTimeoutConfigRequest.
+message ModbusTimeoutConfigResponse {
+  uint32 timeout_ms = 1;           // Configured timeout period (0 = disabled)
+  uint32 command_count = 2;        // Number of stored timeout commands (0-8)
+  bool   timeout_active = 3;       // true if the timeout has fired (commands were executed)
+  uint32 last_ping_elapsed_ms = 4; // Milliseconds since the last received command
+}

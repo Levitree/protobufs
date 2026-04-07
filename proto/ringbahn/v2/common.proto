@@ -1,0 +1,73 @@
+syntax = "proto3";
+
+package ringbahn.v2;
+
+import "ringbahn/v2/enums.proto";
+import "ringbahn/v2/types.proto";
+
+// ============================================================================
+// Common Device Commands
+// ============================================================================
+//
+// These commands are supported by ALL device types and can be sent to any
+// device UUID. The bridge forwards them as CAN command bytes 0x01-0x04
+// on the device's CMD_RX channel (CAN ID = base_id + 0x00).
+//
+// Response arrives on CMD_TX channel (CAN ID = base_id + 0x01).
+//
+
+// Request system information from a device.
+// Response: SystemInfoResponse
+//
+// CAN mapping:
+//   CMD_RX byte 0x02 (no payload)
+//
+// NOTE: On CAN, system_info requires 2 response frames because the data
+// doesn't fit in a single 8-byte CAN frame. The bridge handles reassembly
+// transparently -- the PC receives one SystemInfoResponse.
+//   Frame 1 on CMD_TX: [0x02][0x00][hw_ver:2 LE][sw_ver:2 LE][device_type:1]
+//   Frame 2 on CMD_TX: [0x02][0x01][uuid:6]
+message SystemInfoRequest {}
+
+// Response to SystemInfoRequest.
+// Contains hardware/software version, device type, and the device's UUID.
+//
+// v2 CHANGE: Flattened from v1. The nested DeviceInfo sub-message is removed;
+// device_uuid is promoted to a top-level field. Field numbers differ from v1
+// (clean break, not wire-compatible).
+message SystemInfoResponse {
+  uint32     hardware_version = 1; // Hardware revision number
+  uint32     software_version = 2; // Firmware version (monotonic, higher = newer)
+  DeviceType device_type = 3;     // Device variant (SDADC, BLDC, etc.)
+  DeviceUUID device_uuid = 4;     // Manufacturing UUID (same as Ringbahn frame src_uuid)
+}
+
+// Connectivity test. Device responds with CommandResult { success=true }.
+// Response: CommandResult
+//
+// CAN mapping:
+//   CMD_RX byte 0x01 (no payload)
+//   CMD_TX: [0x01][0x00] (echo command, status OK)
+//
+// Also resets the modbus bridge's timeout watchdog (acts as a keep-alive).
+message PingCommand {}
+
+// Request device reset. Device resets after sending the response.
+// Response: CommandResult
+//
+// CAN mapping:
+//   CMD_RX byte 0x03 (no payload)
+//
+// WARNING: The bridge may not receive a CAN response if the device resets
+// before it can transmit one. The bridge should use a short timeout and
+// return success if the CAN frame was sent, even without a response.
+message ResetCommand {}
+
+// Trigger visual identification (LED blinks for 10 seconds).
+// Useful for physically locating a specific device in a cabinet or enclosure.
+// Response: CommandResult
+//
+// CAN mapping:
+//   CMD_RX byte 0x04 (no payload)
+//   CMD_TX: [0x04][0x00] (echo command, status OK)
+message IdentifyCommand {}

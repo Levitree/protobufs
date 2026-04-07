@@ -1,0 +1,288 @@
+syntax = "proto3";
+
+package ringbahn.v2;
+
+import "ringbahn/v2/enums.proto";
+import "ringbahn/v2/types.proto";
+
+// ============================================================================
+// Bridge-Local Commands
+// ============================================================================
+//
+// These commands are sent with dst_uuid = bridge's own UUID in the Ringbahn
+// frame header. They are handled by the bridge itself and NOT forwarded to
+// any CAN device.
+//
+// Categories:
+//   - Device discovery: list devices on the CAN bus
+//   - Bridge state: operational status, GPS, bus load
+//   - Bridge firmware OTA: update the bridge's own firmware
+//   - Terraboot bridge: proxy bootloader commands to CAN devices
+//
+
+// ============================================================================
+// Device Discovery
+// ============================================================================
+
+// Request a list of all devices currently discovered on the CAN bus.
+// The bridge maintains this list from admin discovery (CAN IDs 0x3F0/0x3F1).
+// Response: AttachedDevicesResponse
+message GetAttachedDevicesRequest {}
+
+// Response to GetAttachedDevicesRequest.
+message AttachedDevicesResponse {
+  // All devices the bridge has discovered and assigned CAN short IDs to.
+  // Ordered by discovery time (oldest first).
+  // Maximum 29 devices per CAN bus (limited by the 32-ID block scheme).
+  repeated AttachedDevice devices = 1;
+}
+
+// Information about a single discovered device on the CAN bus.
+message AttachedDevice {
+  DeviceType device_type = 1;    // Device variant (SDADC, BLDC, etc.)
+  DeviceUUID device_uuid = 2;    // 6-byte manufacturing UUID
+
+  // NEW in v2: Current subscription state for this device.
+  // Bitmask of channels the PC has subscribed to via SubscribeRequest.
+  //
+  // This allows the PC to recover subscription state after a reconnect
+  // (e.g. BLE disconnect/reconnect) without having to re-query each device.
+  // The bridge maintains this state internally and reports it here.
+  uint32 subscribed_channels = 3;
+}
+
+// ============================================================================
+// Bridge State
+// ============================================================================
+
+// Query the bridge's own operational state.
+// Response: BridgeState
+message GetBridgeStateRequest {}
+
+// Bridge operational state.
+message BridgeState {
+  // Number of devices currently on the CAN bus (same as devices.length
+  // from GetAttachedDevicesRequest, but cheaper to query).
+  uint32 connected_devices = 1;
+
+  // Optional GPS state for mobile hubs with GPS modules (e.g. u-blox).
+  // All fields are zero/false if no GPS hardware is present or no fix.
+  GPSState gps_state = 2;
+
+  // NEW in v2: Estimated CAN bus utilization as a percentage (0-100).
+  // Calculated from observed frame rate vs theoretical max at 1 Mbps.
+  // Useful for diagnostics: if bus load approaches 70-80%, consider
+  // increasing hysteresis thresholds or reducing poll slot frequencies.
+  uint32 can_bus_load_percent = 3;
+
+  // NEW in v2: Bridge uptime in seconds since last reset.
+  uint32 uptime_seconds = 4;
+}
+
+// ============================================================================
+// Bootloader Entry
+// ============================================================================
+
+// Request a CAN device to enter bootloader mode.
+// The bridge sends the bootloader entry command via the CAN admin channel.
+// Response: CommandResult
+//
+// NOTE: The target device is identified by dst_uuid in the Ringbahn frame,
+// NOT by a field in this message. The bridge translates UUID -> CAN short_id
+// and sends the admin bootloader command.
+message BootloaderCommand {
+  // Safety magic number to prevent accidental bootloader entry.
+  // Must match the expected value or the command is rejected.
+  uint32 magic = 1;
+}
+
+// ============================================================================
+// Bridge Firmware OTA
+// ============================================================================
+//
+// Updates the bridge's own firmware (not CAN devices -- use Terraboot for those).
+// These commands are identical to v1 semantics, re-packaged under ringbahn.v2.
+//
+// FLOW:
+//   1. ota_begin    -- Start OTA session, declare image size and version
+//   2. ota_write    -- Stream firmware chunks (up to 4KB per Ringbahn message)
+//   3. ota_end      -- Finalize image, optionally validate SHA256 checksum
+//   4. ota_set_boot -- Mark the new image as the active boot partition
+//   5. Reset the bridge to boot into new firmware
+//
+// ota_abort can be called at any point to cancel the OTA session.
+// All responses are InternalOtaStatus with progress information.
+//
+
+// Begin an OTA firmware update session.
+// Response: InternalOtaStatus
+message InternalOtaBeginRequest {
+  uint32 image_size = 1;       // Total firmware image size in bytes
+  uint32 firmware_version = 2; // Monotonic version number (for rollback detection)
+}
+
+// Write a chunk of firmware data to the OTA partition.
+// Response: InternalOtaStatus
+//
+// Chunks must be sent sequentially with correct offsets (no gaps, no overlaps).
+// The bridge validates that offset matches next_offset from the previous response.
+message InternalOtaWriteRequest {
+  bytes  data = 1;   // Firmware chunk (up to 4096 bytes per message)
+  uint32 offset = 2; // Byte offset within the image
+}
+
+// Finalize the OTA image. Optionally compute and return SHA256 for verification.
+// Response: InternalOtaStatus (includes sha256_hash if validate=true)
+message InternalOtaEndRequest {
+  bool validate_sha256 = 1; // If true, bridge computes SHA256 of the received image
+}
+
+// Cancel the current OTA session. Discards any partially written data.
+// Response: InternalOtaStatus
+message InternalOtaAbortRequest {}
+
+// Set the OTA partition as the active boot partition.
+// On next reset, the bridge will boot from the new firmware.
+// Response: InternalOtaStatus
+message InternalOtaSetBootRequest {}
+
+// Progress and status information for OTA operations.
+message InternalOtaStatus {
+  uint32 bytes_written = 1; // Total bytes written to OTA partition so far
+  uint32 free_space = 2;    // Remaining space in the OTA partition
+  bytes  sha256_hash = 3;   // SHA256 hash (32 bytes, only after ota_end with validate=true)
+  uint32 next_offset = 4;   // Expected offset for the next ota_write call
+}
+
+// ============================================================================
+// Terraboot CAN Bootloader Bridge
+// ============================================================================
+//
+// The bridge proxies Terraboot bootloader commands to CAN devices.
+// This allows the PC to flash firmware to any device on the CAN bus
+// through the bridge, without direct CAN access.
+//
+// ADDRESSING:
+//   dst_uuid in the Ringbahn frame = bridge's own UUID
+//     (these commands are sent TO the bridge for proxying)
+//   device_uuid in the protobuf message = target CAN device to bootload
+//     (the bridge translates this to the CAN node address)
+//
+//   This is one of two places where a UUID appears in protobuf messages.
+//   See bridge.proto header comment for the full rationale.
+//
+// FLOW:
+//   1. terraboot_enter    -- Reset target device into Terraboot bootloader mode
+//   2. terraboot_connect  -- Handshake with bootloader, get device capabilities
+//   3. terraboot_send     -- Send firmware blocks (typically 256 bytes each)
+//   4. terraboot_eof      -- Signal end of firmware image
+//   5. terraboot_complete -- Finalize: validate, write boot record, reset device
+//
+// Additional utilities:
+//   terraboot_request  -- Read a firmware block back from flash (for verification)
+//   terraboot_get_id   -- Read the device's CAN UUID from the bootloader
+//   terraboot_identify -- Blink the device LED for physical identification
+//
+
+// Reset a device into Terraboot bootloader mode.
+// The bridge sends the bootloader entry command via CAN admin channel.
+// The device resets and starts its Terraboot bootloader instead of the application.
+// Response: AcknowledgeResponse
+message TerrabootEnterRequest {
+  DeviceUUID device_uuid = 1; // Target device to reset into bootloader
+}
+
+// Establish a bootloader session with a device in Terraboot mode.
+// Returns device capabilities (MCU type, flash layout, current firmware info).
+// Response: TerrabootConnectResponse
+message TerrabootConnectRequest {
+  DeviceUUID device_uuid = 1;
+}
+
+// Response to TerrabootConnectRequest.
+// Contains everything the PC needs to know to flash this device.
+message TerrabootConnectResponse {
+  uint32 protocol_version = 1;  // Terraboot protocol version (for compatibility checks)
+  uint32 start_address = 2;     // Flash start address for application code
+  uint32 block_size = 3;        // Size of each firmware block (typically 256 bytes)
+  uint32 flash_size = 4;        // Total flash available for application code
+  string mcu_type = 5;          // MCU identification (e.g. "STM32F103C8")
+  string terraboot_version = 6; // Bootloader version string
+  string app_variant = 7;       // Currently installed application variant name
+  string app_version = 8;       // Currently installed application version string
+}
+
+// Send a firmware block to the device's flash.
+// Blocks must be sent in order (ascending block_address).
+// Response: TerrabootSendBlockResponse
+message TerrabootSendBlockRequest {
+  DeviceUUID device_uuid = 1;
+  uint32 block_address = 2; // Flash address for this block (must be aligned to block_size)
+  bytes  data = 3;          // Block data (exactly block_size bytes, typically 256)
+}
+
+// Response to TerrabootSendBlockRequest.
+message TerrabootSendBlockResponse {
+  uint32 block_address = 1; // Echo of the written block address (write confirmation)
+}
+
+// Signal that all firmware blocks have been sent.
+// The bootloader finalizes the image (writes metadata, computes checksums).
+// Response: TerrabootEofResponse
+message TerrabootEofRequest {
+  DeviceUUID device_uuid = 1;
+}
+
+// Response to TerrabootEofRequest.
+message TerrabootEofResponse {
+  uint32 page_count = 1; // Total number of flash pages written
+}
+
+// Read a firmware block back from the device's flash.
+// Used for post-write verification (compare with what was sent).
+// Response: TerrabootRequestBlockResponse
+message TerrabootRequestBlockRequest {
+  DeviceUUID device_uuid = 1;
+  uint32 block_address = 2; // Flash address to read (aligned to block_size)
+}
+
+// Response to TerrabootRequestBlockRequest.
+message TerrabootRequestBlockResponse {
+  uint32 block_address = 1; // Echo of the requested address
+  bytes  data = 2;          // Block data read from flash (block_size bytes)
+}
+
+// Finalize the bootloader session.
+// The device validates the new firmware, updates its boot record, and resets
+// into the new application code.
+// Response: TerrabootCompleteResponse
+message TerrabootCompleteRequest {
+  DeviceUUID device_uuid = 1;
+}
+
+// Response to TerrabootCompleteRequest.
+// Empty -- success is indicated by receiving the response (no error).
+message TerrabootCompleteResponse {}
+
+// Read the device's CAN UUID from the bootloader.
+// Useful when a device's UUID is unknown (e.g. new/replacement hardware).
+// Response: TerrabootGetIdResponse
+message TerrabootGetIdRequest {
+  DeviceUUID device_uuid = 1; // Can be a broadcast/wildcard if supported
+}
+
+// Response to TerrabootGetIdRequest.
+message TerrabootGetIdResponse {
+  // CAN UUID of the device (6 bytes).
+  // Terraboot internally pads this to 12 bytes; the bridge truncates to 6.
+  bytes can_uuid = 1;
+}
+
+// Blink the device LED for physical identification while in bootloader mode.
+// Response: TerrabootIdentifyResponse
+message TerrabootIdentifyRequest {
+  DeviceUUID device_uuid = 1;
+}
+
+// Response to TerrabootIdentifyRequest. Empty -- success indicated by response.
+message TerrabootIdentifyResponse {}
