@@ -13,3 +13,7 @@ plugins:
     out: generated/ts
     opt:
       - target=ts
+
+  # Modern Swift generation using SwiftProtobuf runtime.
+  - remote: buf.build/apple/swift
+    out: generated/swift
