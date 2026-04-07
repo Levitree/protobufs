@@ -1,0 +1,2 @@
+ringbahn.v2.DeviceUUID.value max_size:6 fixed_length:true
+ringbahn.v2.CommandResult.detail max_size:64

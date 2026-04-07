@@ -1,0 +1,2 @@
+ringbahn.v2.DigitalOutputStateEvent.packed_duty_cycles max_size:8
+ringbahn.v2.ModbusPollResultEvent.register_data max_size:64
