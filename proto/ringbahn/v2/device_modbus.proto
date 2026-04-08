@@ -212,6 +212,49 @@ message ModbusPollSlotConfig {
 }
 
 // ============================================================================
+// Smart Poll Configuration
+// ============================================================================
+
+// Configure smart polling behavior for an active poll slot.
+// The slot must already be configured via ModbusSetPollRequest.
+// Response: CommandResult
+//
+// Smart polling enables change detection and delta reporting:
+//   - Full report: first poll or every force_interval polls sends all registers
+//   - Delta report: only changed registers are sent (saves CAN bandwidth)
+//   - Adaptive backoff: automatically slows polling when values are stable
+//
+// CAN mapping: CMD_RX byte 0x27:
+//   [slot:1][flags:1][force_interval:1][max_backoff:1][backoff_threshold:1]
+message ModbusSetPollConfigRequest {
+  uint32 slot = 1;              // Slot index 0-15 (must already be active)
+  uint32 flags = 2;             // Bitmask: bit0=SMART, bit1=ADAPTIVE
+  uint32 force_interval = 3;    // Full report every N polls (0 = default 10)
+  uint32 max_backoff = 4;       // Max backoff shift 0-3 (interval << shift, 3 = 8x)
+  uint32 backoff_threshold = 5; // No-change polls before increasing backoff (0 = default 4)
+}
+
+// Query the current adaptive polling state for a slot.
+// Response: ModbusPollStatusResponse
+//
+// CAN mapping: CMD_RX byte 0x2B: [slot:1]
+// Response: [0x2B][0x00][flags:1][backoff_shift:1][no_change_count:1]
+//           [force_counter:1][eff_interval_lo:1][eff_interval_hi:1]
+message ModbusGetPollStatusRequest {
+  uint32 slot = 1; // Slot index 0-15
+}
+
+// Response to ModbusGetPollStatusRequest.
+message ModbusPollStatusResponse {
+  uint32 slot = 1;               // Echo of requested slot
+  uint32 flags = 2;              // Current POLL_FLAG_* flags
+  uint32 backoff_shift = 3;      // Current backoff level (0-3)
+  uint32 no_change_count = 4;    // Consecutive polls with no change
+  uint32 force_counter = 5;      // Polls remaining until next forced full report
+  uint32 effective_interval = 6; // Current effective interval in 100ms units
+}
+
+// ============================================================================
 // Timeout Safety
 // ============================================================================
 

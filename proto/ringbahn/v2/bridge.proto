@@ -128,6 +128,10 @@ message BridgeCommand {
     ModbusGetPollsRequest               modbus_get_polls = 46;       // -> ModbusPollConfigResponse
     ModbusConfigureUartRequest          modbus_configure_uart = 47;  // -> CommandResult
 
+    // Modbus smart polling (DEVICE_TYPE_RS485_BRIDGE only)
+    ModbusSetPollConfigRequest          modbus_set_poll_config = 51; // -> CommandResult
+    ModbusGetPollStatusRequest          modbus_get_poll_status = 52; // -> ModbusPollStatusResponse
+
     // Modbus timeout safety (DEVICE_TYPE_RS485_BRIDGE only)
     ModbusSetTimeoutCommandsRequest     modbus_set_timeout = 48;     // -> CommandResult
     ModbusClearTimeoutCommandsRequest   modbus_clear_timeout = 49;   // -> CommandResult
@@ -204,6 +208,7 @@ message BridgeResponse {
     ModbusReadResponse           modbus_read = 40;
     ModbusPollConfigResponse     modbus_polls = 46;
     ModbusTimeoutConfigResponse  modbus_timeout = 50;
+    ModbusPollStatusResponse     modbus_poll_status = 52;
 
     // Bridge-local responses
     AttachedDevicesResponse   attached_devices = 60;

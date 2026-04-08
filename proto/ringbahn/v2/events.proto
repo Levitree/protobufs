@@ -165,6 +165,15 @@ message ModbusPollResultEvent {
   //   4 = slave device failure
   //   0xFF = timeout (no response from slave)
   uint32 error_code = 6;
+
+  // Smart polling: true if this is a delta report (only changed values).
+  // false for full reports and legacy (non-smart) polls.
+  bool is_delta = 7;
+
+  // Smart polling: bitmask of which registers/coils changed (delta only).
+  // Register reads: 24-bit mask, bit N = register at offset N changed.
+  // Coil reads: 8-bit byte mask indicating which packed coil bytes changed.
+  uint32 changed_mask = 8;
 }
 
 // ============================================================================
