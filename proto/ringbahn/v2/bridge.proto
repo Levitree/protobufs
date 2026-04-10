@@ -8,6 +8,7 @@ import "ringbahn/v2/events.proto";
 import "ringbahn/v2/device_bldc.proto";
 import "ringbahn/v2/device_digital_output.proto";
 import "ringbahn/v2/device_modbus.proto";
+import "ringbahn/v2/bridge_subscription.proto";
 import "ringbahn/v2/device_routing.proto";
 import "ringbahn/v2/types.proto";
 
@@ -147,6 +148,11 @@ message BridgeCommand {
     GetAttachedDevicesRequest  get_attached_devices = 60; // -> AttachedDevicesResponse
     GetBridgeStateRequest      get_bridge_state = 61;     // -> BridgeState
     BootloaderCommand          bootloader = 62;           // -> CommandResult
+
+    // --- Bridge event subscriptions (dst_uuid = bridge's own UUID) ---
+    // Subscribe to bridge-generated events (presence, GPS).
+    BridgeSubscribeRequest     bridge_subscribe = 63;     // -> CommandResult
+    BridgeUnsubscribeRequest   bridge_unsubscribe = 64;   // -> CommandResult
 
     // --- Bridge firmware OTA (dst_uuid = bridge's own UUID) ---
     // Updates the bridge itself. Identical semantics to v1.
@@ -329,5 +335,10 @@ message DeviceEvent {
     // SPECIAL: frame device_uuid = bridge UUID (bridge generated this).
     // The device identity is in DevicePresenceEvent.device_uuid.
     DevicePresenceEvent      presence = 60;
+
+    // GPS state changed (fix acquired/lost).
+    // src_uuid in frame = bridge UUID.
+    // Only sent to transports subscribed via BridgeSubscribeRequest.
+    GPSStateEvent            gps_state = 70;
   }
 }
