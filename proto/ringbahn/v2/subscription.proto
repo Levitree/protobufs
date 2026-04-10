@@ -6,12 +6,13 @@ package ringbahn.v2;
 // Subscription Commands
 // ============================================================================
 //
-// The subscription system replaces v1's polling model. Instead of the PC
-// repeatedly asking "what's your state?" (GetStateRequest), devices push
-// data when values change beyond a configurable hysteresis threshold.
+// Unified subscription interface for all device types including the bridge.
+// The bridge routes based on device_uuid in the frame header:
+//   - device_uuid = CAN device -> forwarded as CAN subscribe command
+//   - device_uuid = bridge UUID -> subscribes to bridge-generated event channels
 //
-// FLOW:
-//   1. PC sends SubscribeRequest to a device (via BridgeCommand, device_uuid = device)
+// CAN DEVICE FLOW:
+//   1. PC sends SubscribeRequest (via BridgeCommand, device_uuid = device)
 //   2. Bridge translates to CAN command 0x05 (SUBSCRIBE) on device's CMD_RX
 //   3. Device enables event emission for the requested channels
 //   4. When a channel value changes beyond its hysteresis threshold,
@@ -25,6 +26,7 @@ package ringbahn.v2;
 //   Modbus:         bits 0-15 = poll slots 0-15  (16 channels)
 //   BLDC:           N/A (command-driven, no subscriptions)
 //   Digital Output: N/A (command-driven, no subscriptions)
+//   Bridge:         bit 0 = device presence, bit 1 = GPS state  (2 channels)
 //
 // ADDITIVE SEMANTICS:
 //   Subscribing to new channels does NOT unsubscribe from existing ones.

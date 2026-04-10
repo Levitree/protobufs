@@ -8,7 +8,6 @@ import "ringbahn/v2/events.proto";
 import "ringbahn/v2/device_bldc.proto";
 import "ringbahn/v2/device_digital_output.proto";
 import "ringbahn/v2/device_modbus.proto";
-import "ringbahn/v2/bridge_subscription.proto";
 import "ringbahn/v2/device_routing.proto";
 import "ringbahn/v2/types.proto";
 
@@ -108,9 +107,14 @@ message BridgeCommand {
     ResetCommand             reset = 4;             // -> CommandResult
     IdentifyCommand          identify = 5;          // -> CommandResult
 
-    // --- Subscription management (SDADC, ADC Controller, Modbus) ---
-    // Forwarded to device's CMD_RX as CAN bytes 0x05-0x07.
-    // Invalid for BLDC and Digital Output (returns error_code=6).
+    // --- Subscription management ---
+    // For CAN devices (SDADC, ADC Controller, Modbus): forwarded to device's
+    // CMD_RX as CAN bytes 0x05-0x07. Invalid for BLDC/Digital Output (error_code=6).
+    // For bridge (device_uuid = bridge's own UUID): subscribes to bridge-generated
+    // event channels:
+    //   channel 0: Device presence (DevicePresenceEvent)
+    //   channel 1: GPS state (GPSStateEvent)
+    //   channels 2-29: Reserved
     SubscribeRequest         subscribe = 10;        // -> CommandResult
     UnsubscribeRequest       unsubscribe = 11;      // -> CommandResult
     SetHysteresisRequest     set_hysteresis = 12;   // -> CommandResult
@@ -148,11 +152,6 @@ message BridgeCommand {
     GetAttachedDevicesRequest  get_attached_devices = 60; // -> AttachedDevicesResponse
     GetBridgeStateRequest      get_bridge_state = 61;     // -> BridgeState
     BootloaderCommand          bootloader = 62;           // -> CommandResult
-
-    // --- Bridge event subscriptions (device_uuid = bridge's own UUID) ---
-    // Subscribe to bridge-generated events (presence, GPS).
-    BridgeSubscribeRequest     bridge_subscribe = 63;     // -> CommandResult
-    BridgeUnsubscribeRequest   bridge_unsubscribe = 64;   // -> CommandResult
 
     // --- Bridge firmware OTA (device_uuid = bridge's own UUID) ---
     // Updates the bridge itself. Identical semantics to v1.
@@ -338,7 +337,7 @@ message DeviceEvent {
 
     // GPS state changed (fix acquired/lost).
     // device_uuid in frame = bridge UUID.
-    // Only sent to transports subscribed via BridgeSubscribeRequest.
+    // Only sent to transports subscribed to bridge channel 1.
     GPSStateEvent            gps_state = 70;
   }
 }
