@@ -11,7 +11,7 @@ package ringbahn.v2;
 // data when values change beyond a configurable hysteresis threshold.
 //
 // FLOW:
-//   1. PC sends SubscribeRequest to a device (via BridgeCommand, dst_uuid = device)
+//   1. PC sends SubscribeRequest to a device (via BridgeCommand, device_uuid = device)
 //   2. Bridge translates to CAN command 0x05 (SUBSCRIBE) on device's CMD_RX
 //   3. Device enables event emission for the requested channels
 //   4. When a channel value changes beyond its hysteresis threshold,

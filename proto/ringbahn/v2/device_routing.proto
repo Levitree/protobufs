@@ -9,7 +9,7 @@ import "ringbahn/v2/types.proto";
 // Bridge-Local Commands
 // ============================================================================
 //
-// These commands are sent with dst_uuid = bridge's own UUID in the Ringbahn
+// These commands are sent with device_uuid = bridge's own UUID in the Ringbahn
 // frame header. They are handled by the bridge itself and NOT forwarded to
 // any CAN device.
 //
@@ -87,7 +87,7 @@ message BridgeState {
 // The bridge sends the bootloader entry command via the CAN admin channel.
 // Response: CommandResult
 //
-// NOTE: The target device is identified by dst_uuid in the Ringbahn frame,
+// NOTE: The target device is identified by device_uuid in the Ringbahn frame,
 // NOT by a field in this message. The bridge translates UUID -> CAN short_id
 // and sends the admin bootloader command.
 message BootloaderCommand {
@@ -163,7 +163,7 @@ message InternalOtaStatus {
 // through the bridge, without direct CAN access.
 //
 // ADDRESSING:
-//   dst_uuid in the Ringbahn frame = bridge's own UUID
+//   device_uuid in the Ringbahn frame = bridge's own UUID
 //     (these commands are sent TO the bridge for proxying)
 //   device_uuid in the protobuf message = target CAN device to bootload
 //     (the bridge translates this to the CAN node address)

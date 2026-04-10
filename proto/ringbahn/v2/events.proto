@@ -187,7 +187,7 @@ message ModbusPollResultEvent {
 // The bridge monitors these to detect device presence.
 //
 // SPECIAL ADDRESSING:
-//   src_uuid in the Ringbahn frame = bridge's own UUID (the bridge generated this).
+//   device_uuid in the Ringbahn frame = bridge's own UUID (the bridge generated this).
 //   The device that appeared/disappeared is identified by device_uuid in this message.
 //   This is one of two places where a UUID appears in protobuf (the other is
 //   Terraboot commands). See bridge.proto header comment for rationale.
@@ -213,7 +213,7 @@ message DevicePresenceEvent {
 // with BRIDGE_EVENT_GPS (bit 1) set.
 //
 // ADDRESSING:
-//   src_uuid in the Ringbahn frame = bridge's own UUID.
+//   device_uuid in the Ringbahn frame = bridge's own UUID.
 //
 message GPSStateEvent {
   GPSState state = 1;

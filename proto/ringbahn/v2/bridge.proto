@@ -53,7 +53,7 @@ import "ringbahn/v2/types.proto";
 //   The PC needed to know which wrapper to use per device type.
 //
 //   In v2, the PC always sends BridgeCommand -- the bridge validates that the
-//   command is appropriate for the target device type (looked up from dst_uuid)
+//   command is appropriate for the target device type (looked up from device_uuid)
 //   and returns CommandResult { success=false, error_code=6 } if mismatched.
 //   This simplifies PC-side code: one message type to construct, one to parse.
 //
@@ -143,18 +143,18 @@ message BridgeCommand {
     ModbusSetTimeoutCommandsRequest     modbus_set_timeout = 48;     // -> CommandResult
     ModbusClearTimeoutCommandsRequest   modbus_clear_timeout = 49;   // -> CommandResult
 
-    // --- Bridge-local commands (dst_uuid = bridge's own UUID) ---
+    // --- Bridge-local commands (device_uuid = bridge's own UUID) ---
     // Handled by the bridge, not forwarded to CAN.
     GetAttachedDevicesRequest  get_attached_devices = 60; // -> AttachedDevicesResponse
     GetBridgeStateRequest      get_bridge_state = 61;     // -> BridgeState
     BootloaderCommand          bootloader = 62;           // -> CommandResult
 
-    // --- Bridge event subscriptions (dst_uuid = bridge's own UUID) ---
+    // --- Bridge event subscriptions (device_uuid = bridge's own UUID) ---
     // Subscribe to bridge-generated events (presence, GPS).
     BridgeSubscribeRequest     bridge_subscribe = 63;     // -> CommandResult
     BridgeUnsubscribeRequest   bridge_unsubscribe = 64;   // -> CommandResult
 
-    // --- Bridge firmware OTA (dst_uuid = bridge's own UUID) ---
+    // --- Bridge firmware OTA (device_uuid = bridge's own UUID) ---
     // Updates the bridge itself. Identical semantics to v1.
     InternalOtaBeginRequest    ota_begin = 70;   // -> InternalOtaStatus
     InternalOtaWriteRequest    ota_write = 71;   // -> InternalOtaStatus
@@ -162,10 +162,10 @@ message BridgeCommand {
     InternalOtaAbortRequest    ota_abort = 73;   // -> InternalOtaStatus
     InternalOtaSetBootRequest  ota_set_boot = 74; // -> InternalOtaStatus
 
-    // --- Terraboot CAN bootloader (dst_uuid = bridge's own UUID) ---
+    // --- Terraboot CAN bootloader (device_uuid = bridge's own UUID) ---
     // Bridge proxies bootloader commands to CAN devices.
     // Target device identified by device_uuid INSIDE the protobuf message
-    // (not by dst_uuid, which points to the bridge).
+    // (not by device_uuid, which points to the bridge).
     TerrabootEnterRequest        terraboot_enter = 80;    // -> AcknowledgeResponse
     TerrabootConnectRequest      terraboot_connect = 81;  // -> TerrabootConnectResponse
     TerrabootSendBlockRequest    terraboot_send = 82;     // -> TerrabootSendBlockResponse
@@ -303,7 +303,7 @@ message DeviceEvent {
     // --- Sensor data events ---
 
     // SDADC channel value update (one per channel per event).
-    // src_uuid in frame identifies which SDADC device.
+    // device_uuid in frame identifies which SDADC device.
     // DeviceEvent.channel identifies which measurement channel (0-11).
     SDADCChannelEvent        sdadc = 10;
 
@@ -326,7 +326,7 @@ message DeviceEvent {
     // --- Modbus events ---
 
     // Modbus poll slot completed a read cycle (bridge reassembled multi-frame burst).
-    // src_uuid in frame identifies which modbus bridge device.
+    // device_uuid in frame identifies which modbus bridge device.
     ModbusPollResultEvent    modbus_poll = 50;
 
     // --- Bridge-generated events ---
@@ -337,7 +337,7 @@ message DeviceEvent {
     DevicePresenceEvent      presence = 60;
 
     // GPS state changed (fix acquired/lost).
-    // src_uuid in frame = bridge UUID.
+    // device_uuid in frame = bridge UUID.
     // Only sent to transports subscribed via BridgeSubscribeRequest.
     GPSStateEvent            gps_state = 70;
   }

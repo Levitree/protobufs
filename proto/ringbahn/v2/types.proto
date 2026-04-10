@@ -24,7 +24,7 @@ message DeviceUUID {
 //   2 = invalid parameter (out-of-range value, wrong channel, etc.)
 //   3 = device busy (e.g. modbus transaction in progress)
 //   4 = CAN timeout (bridge couldn't reach device within deadline)
-//   5 = unknown device UUID (dst_uuid not in bridge's device table)
+//   5 = unknown device UUID (device_uuid not in bridge's device table)
 //   6 = command not valid for device type (e.g. BLDC command to SDADC)
 message CommandResult {
   bool   success = 1;
