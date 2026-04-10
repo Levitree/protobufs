@@ -5,7 +5,7 @@ package ringbahn.v2;
 import "ringbahn/v2/enums.proto";
 
 // 6-byte device identifier, assigned at manufacturing.
-// Matches the UUID carried in the Ringbahn frame header (src_uuid / dst_uuid).
+// Matches the UUID carried in the Ringbahn v2 frame header (device_uuid).
 // This is the primary way the PC identifies devices -- CAN short IDs are never
 // exposed to the application layer.
 //
