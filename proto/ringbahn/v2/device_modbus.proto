@@ -17,9 +17,10 @@ import "ringbahn/v2/enums.proto";
 //
 //   2. DIRECT WRITES -- Single register/coil writes are single CAN frames.
 //
-//   3. POLL SLOTS -- Autonomous periodic reads. The PC configures up to 16 poll
-//      slots, each reading a range of registers from a slave at a configurable
-//      interval. Results are pushed as ModbusPollResultEvent (see events.proto).
+//   3. POLL SLOTS -- Autonomous round-robin reads. The PC configures up to 16
+//      poll slots, each reading a range of registers from a slave. All active
+//      slots are polled as fast as possible in round-robin order.
+//      Results are pushed as ModbusPollResultEvent (see events.proto).
 //      The modbus device caches last-seen values per slot and only pushes when
 //      register values actually change (change detection on device).
 //
@@ -127,9 +128,10 @@ message ModbusWriteRegisterRequest {
 // Configure an autonomous poll slot.
 // Response: CommandResult
 //
-// The modbus device will read the specified registers from the slave at the
-// given interval and push results as ModbusPollResultEvent on the slot's
-// data channel. Up to 16 slots can be active simultaneously.
+// The modbus device will read the specified registers from the slave and push
+// results as ModbusPollResultEvent on the slot's data channel. All active
+// slots are polled in round-robin order as fast as possible. Up to 16 slots
+// can be active simultaneously.
 //
 // Each poll slot gets its own CAN data channel ID (base+0x02+slot), so
 // poll results from different slots don't interfere with each other.
@@ -138,14 +140,13 @@ message ModbusWriteRegisterRequest {
 // only pushes a new event when values differ from the cache. This prevents
 // flooding the CAN bus with identical readings.
 //
-// CAN mapping: CMD_RX byte 0x24: [slot:1][slave:1][func:1][addr:2 LE][qty:1][interval:1]
+// CAN mapping: CMD_RX byte 0x24: [slot:1][slave:1][func:1][addr:2 LE][qty:1]
 message ModbusSetPollRequest {
   uint32 slot = 1;           // Slot index 0-15 (each gets its own CAN data channel)
   uint32 slave_address = 2;  // Modbus slave to poll (1-247)
   ModbusFunction function = 3; // Read function to use
   uint32 start_address = 4;  // Starting register address
   uint32 quantity = 5;       // Number of registers to read per poll (1-24)
-  uint32 interval_100ms = 6; // Poll interval in 100ms units (e.g. 10 = every 1 second)
 }
 
 // Deactivate a poll slot. Stops polling and frees the slot for reuse.
@@ -177,7 +178,6 @@ message ModbusPollSlotConfig {
   ModbusFunction function = 3;
   uint32 start_address = 4;
   uint32 quantity = 5;
-  uint32 interval_100ms = 6;
 }
 
 // ============================================================================
@@ -191,36 +191,30 @@ message ModbusPollSlotConfig {
 // Smart polling enables change detection and delta reporting:
 //   - Full report: first poll or every force_interval polls sends all registers
 //   - Delta report: only changed registers are sent (saves CAN bandwidth)
-//   - Adaptive backoff: automatically slows polling when values are stable
 //
-// CAN mapping: CMD_RX byte 0x27:
-//   [slot:1][flags:1][force_interval:1][max_backoff:1][backoff_threshold:1]
+// CAN mapping: CMD_RX byte 0x27: [slot:1][flags:1][force_interval:1]
 message ModbusSetPollConfigRequest {
   uint32 slot = 1;              // Slot index 0-15 (must already be active)
-  uint32 flags = 2;             // Bitmask: bit0=SMART, bit1=ADAPTIVE
+  uint32 flags = 2;             // Bitmask: bit0=SMART (enable change detection + delta)
   uint32 force_interval = 3;    // Full report every N polls (0 = default 10)
-  uint32 max_backoff = 4;       // Max backoff shift 0-3 (interval << shift, 3 = 8x)
-  uint32 backoff_threshold = 5; // No-change polls before increasing backoff (0 = default 4)
 }
 
-// Query the current adaptive polling state for a slot.
+// Query the current polling state for a slot.
 // Response: ModbusPollStatusResponse
 //
 // CAN mapping: CMD_RX byte 0x2B: [slot:1]
-// Response: [0x2B][0x00][flags:1][backoff_shift:1][no_change_count:1]
-//           [force_counter:1][eff_interval_lo:1][eff_interval_hi:1]
+// Response: [0x2B][0x00][flags:1][force_counter:1][force_interval:1][active:1]
 message ModbusGetPollStatusRequest {
   uint32 slot = 1; // Slot index 0-15
 }
 
 // Response to ModbusGetPollStatusRequest.
 message ModbusPollStatusResponse {
-  uint32 slot = 1;               // Echo of requested slot
-  uint32 flags = 2;              // Current POLL_FLAG_* flags
-  uint32 backoff_shift = 3;      // Current backoff level (0-3)
-  uint32 no_change_count = 4;    // Consecutive polls with no change
-  uint32 force_counter = 5;      // Polls remaining until next forced full report
-  uint32 effective_interval = 6; // Current effective interval in 100ms units
+  uint32 slot = 1;            // Echo of requested slot
+  uint32 flags = 2;           // Current POLL_FLAG_* flags
+  uint32 force_counter = 3;   // Polls remaining until next forced full report
+  uint32 force_interval = 4;  // Configured force interval
+  bool active = 5;            // Whether the slot is active
 }
 
 // ============================================================================
