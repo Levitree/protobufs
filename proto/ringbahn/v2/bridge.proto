@@ -117,12 +117,9 @@ message BridgeCommand {
 
     // --- Modbus bridge commands (DEVICE_TYPE_RS485_BRIDGE only) ---
     // Bridge translates into CAN bytes 0x20-0x2E on CMD_RX.
-    // For multi-register writes, the bridge handles CAN multi-frame staging
-    // (START/DATA/EXEC) transparently -- PC sends one protobuf message.
     ModbusReadRequest                   modbus_read = 40;            // -> ModbusReadResponse
     ModbusWriteCoilRequest              modbus_write_coil = 41;      // -> CommandResult
     ModbusWriteRegisterRequest          modbus_write_register = 42;  // -> CommandResult
-    ModbusWriteMultipleRegistersRequest modbus_write_multiple = 43;  // -> CommandResult
     ModbusSetPollRequest                modbus_set_poll = 44;        // -> CommandResult
     ModbusClearPollRequest              modbus_clear_poll = 45;      // -> CommandResult
     ModbusGetPollsRequest               modbus_get_polls = 46;       // -> ModbusPollConfigResponse
@@ -135,7 +132,6 @@ message BridgeCommand {
     // Modbus timeout safety (DEVICE_TYPE_RS485_BRIDGE only)
     ModbusSetTimeoutCommandsRequest     modbus_set_timeout = 48;     // -> CommandResult
     ModbusClearTimeoutCommandsRequest   modbus_clear_timeout = 49;   // -> CommandResult
-    ModbusGetTimeoutConfigRequest       modbus_get_timeout = 50;     // -> ModbusTimeoutConfigResponse
 
     // --- Bridge-local commands (dst_uuid = bridge's own UUID) ---
     // Handled by the bridge, not forwarded to CAN.
@@ -207,7 +203,6 @@ message BridgeResponse {
     // Modbus responses
     ModbusReadResponse           modbus_read = 40;
     ModbusPollConfigResponse     modbus_polls = 46;
-    ModbusTimeoutConfigResponse  modbus_timeout = 50;
     ModbusPollStatusResponse     modbus_poll_status = 52;
 
     // Bridge-local responses

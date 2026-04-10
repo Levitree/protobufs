@@ -16,9 +16,6 @@ import "ringbahn/v2/enums.proto";
 //      multi-frame CAN responses which the routing bridge reassembles.
 //
 //   2. DIRECT WRITES -- Single register/coil writes are single CAN frames.
-//      Multi-register writes (Modbus FC 0x10) are staged across multiple CAN
-//      frames (START -> DATA -> EXEC). The routing bridge handles this staging
-//      transparently -- the PC sends one protobuf message with all values.
 //
 //   3. POLL SLOTS -- Autonomous periodic reads. The PC configures up to 16 poll
 //      slots, each reading a range of registers from a slave at a configurable
@@ -121,34 +118,6 @@ message ModbusWriteRegisterRequest {
   uint32 slave_address = 1; // Modbus slave address (1-247)
   uint32 address = 2;       // Register address
   uint32 value = 3;         // Register value (16-bit, stored in uint32 for proto3 compatibility)
-}
-
-// ============================================================================
-// Direct Write -- Multiple Registers
-// ============================================================================
-
-// Write multiple holding registers (Modbus function code 0x10).
-// Response: CommandResult
-//
-// MULTI-FRAME STAGING (handled transparently by routing bridge):
-//   The PC sends this single protobuf message with all register values.
-//   The routing bridge breaks it into a sequence of CAN frames:
-//     1. WRITE_MULTI_START  CMD_RX 0x28: [slave:1][addr:2 LE][qty:1][data0:2 LE]
-//     2. WRITE_MULTI_DATA   CMD_RX 0x29: [idx:1][data:6]  (3 registers per frame, repeat N times)
-//     3. WRITE_MULTI_EXEC   CMD_RX 0x2A: (no payload, triggers the actual modbus write)
-//
-//   The modbus device buffers the staged data. If EXEC is not received within
-//   500ms of START, the device discards the buffer (timeout safety).
-//
-//   Maximum: 24 registers per write (limited by device-side buffer).
-message ModbusWriteMultipleRegistersRequest {
-  uint32 slave_address = 1;  // Modbus slave address (1-247)
-  uint32 start_address = 2;  // Starting register address
-
-  // Register values to write, in order.
-  // Each value is 16-bit (stored in uint32 for proto3 compatibility).
-  // The routing bridge stages these across CAN frames (3 registers per DATA frame).
-  repeated uint32 values = 3;
 }
 
 // ============================================================================
@@ -270,7 +239,9 @@ message ModbusPollStatusResponse {
 //
 // CAN mapping:
 //   Individual timeout command storage: CMD_RX byte 0x2C:
-//     [idx:1][slave:1][addr:2 LE][value:2 LE]
+//     Register write: [idx:1][slave:1][addr:2 LE][value:2 LE]  (7 bytes)
+//     Coil write:     [idx|0x80:1][slave:1][addr:2 LE][value:1] (6 bytes)
+//     idx bit 7 distinguishes register (0) from coil (1) writes.
 //   Timeout period: CMD_RX byte 0x2E: [timeout:2 LE]
 message ModbusSetTimeoutCommandsRequest {
   // Timeout period in milliseconds. Set to 0 to disable the timeout watchdog.
@@ -299,15 +270,3 @@ message ModbusTimeoutCommand {
 //
 // CAN mapping: CMD_RX byte 0x2D (no payload)
 message ModbusClearTimeoutCommandsRequest {}
-
-// Query the current timeout configuration and watchdog status.
-// Response: ModbusTimeoutConfigResponse
-message ModbusGetTimeoutConfigRequest {}
-
-// Response to ModbusGetTimeoutConfigRequest.
-message ModbusTimeoutConfigResponse {
-  uint32 timeout_ms = 1;           // Configured timeout period (0 = disabled)
-  uint32 command_count = 2;        // Number of stored timeout commands (0-8)
-  bool   timeout_active = 3;       // true if the timeout has fired (commands were executed)
-  uint32 last_ping_elapsed_ms = 4; // Milliseconds since the last received command
-}
