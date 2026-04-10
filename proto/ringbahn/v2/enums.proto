@@ -7,13 +7,22 @@ package ringbahn.v2;
 enum DeviceType {
   DEVICE_TYPE_UNSPECIFIED = 0;       // Unknown or uninitialized
   DEVICE_TYPE_ROUTING = 1;          // PC-CAN bridge (routing device). Was HUB in v1.
-  DEVICE_TYPE_NODE = 2;             // Generic node (reserved for future use)
+  reserved 2;                        // Was DEVICE_TYPE_NODE — now represented by RoutingDeviceType
   DEVICE_TYPE_SD_ADC = 3;           // Sigma-delta ADC (AD4111-based, 8 current + 4 voltage)
   DEVICE_TYPE_DIGITAL_OUT = 4;      // PWM output bridge (8 channels, MCP4131)
   DEVICE_TYPE_RS485_BRIDGE = 5;     // Modbus RTU bridge (RS485 UART to CAN)
   DEVICE_TYPE_BLDC = 6;             // Brushless DC motor controller (2 channels)
   DEVICE_TYPE_BLDC_CONTROLLER = 7;  // Joystick/button controller for BLDC board
   DEVICE_TYPE_TERRABOOT = 254;      // Device is in bootloader mode (no application running)
+}
+
+// Distinguishes how a routing device connects to the host.
+// Both Hub and Node boards are functionally identical routing devices;
+// the difference is the transport to the host (USB/BLE vs Xbee).
+enum RoutingDeviceType {
+  ROUTING_DEVICE_TYPE_UNSPECIFIED = 0;
+  ROUTING_DEVICE_TYPE_HUB = 1;    // Direct connection (USB/BLE)
+  ROUTING_DEVICE_TYPE_NODE = 2;   // Remote connection (Xbee)
 }
 
 // RS485 UART baud rate options for modbus bridge configuration.
