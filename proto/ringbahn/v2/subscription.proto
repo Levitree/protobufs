@@ -75,6 +75,31 @@ message UnsubscribeRequest {
 //   SDADC voltage channels: millivolts (mV)
 //   ADC controller joystick: millivolts (mV)
 //   ADC controller switches: N/A (always emit on any change, threshold ignored)
+// Renew subscription timeout for data channels on a device.
+// Response: CommandResult
+//
+// All subscriptions (and modbus poll slots) have a fixed 5-second timeout.
+// The host must send RenewRequest within 5 seconds of subscribing, and then
+// periodically thereafter, or the device will automatically unsubscribe the
+// timed-out channels and stop emitting events.
+//
+// Renewal is tracked per channel: two RenewRequests with different masks
+// are tracked independently. For example, renewing channels 0-3 does not
+// reset the timer for channels 4-7.
+//
+// SUBSCRIBE also resets the timer for the subscribed channels, so a
+// re-SUBSCRIBE counts as a renewal.
+//
+// CAN mapping:
+//   CMD_RX byte 0x09: [channel_mask:4 LE]
+//   CMD_TX: [0x09][0x00][active_mask:4 LE]
+message RenewRequest {
+  // Bitmask of channels to renew (same format as SubscribeRequest).
+  // Only currently-subscribed channels are affected; unsubscribed bits
+  // in the mask are silently ignored.
+  uint32 channel_mask = 1;
+}
+
 message SetHysteresisRequest {
   uint32 channel = 1;      // Channel index (0-29)
   uint32 threshold = 2;    // Threshold in native units

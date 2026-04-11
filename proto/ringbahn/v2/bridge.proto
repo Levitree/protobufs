@@ -118,6 +118,7 @@ message BridgeCommand {
     SubscribeRequest         subscribe = 10;        // -> CommandResult
     UnsubscribeRequest       unsubscribe = 11;      // -> CommandResult
     SetHysteresisRequest     set_hysteresis = 12;   // -> CommandResult
+    RenewRequest             renew = 13;            // -> CommandResult
 
     // --- BLDC motor commands (DEVICE_TYPE_BLDC only) ---
     // Forwarded as CAN bytes 0x20-0x21 on CMD_RX.
