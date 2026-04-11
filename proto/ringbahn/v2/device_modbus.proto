@@ -233,9 +233,10 @@ message ModbusPollStatusResponse {
 //
 // CAN mapping:
 //   Individual timeout command storage: CMD_RX byte 0x2C:
-//     Register write: [idx:1][slave:1][addr:2 LE][value:2 LE]  (7 bytes)
-//     Coil write:     [idx|0x80:1][slave:1][addr:2 LE][value:1] (6 bytes)
-//     idx bit 7 distinguishes register (0) from coil (1) writes.
+//     Register write: [flags:1][slave:1][addr:2 LE][value:2 LE]  (7 bytes)
+//     Coil write:     [0x80:1][slave:1][addr:2 LE][value:1]      (6 bytes)
+//     flags bit 7: 0 = register, 1 = coil. Slot auto-assigned.
+//     Dedupes on slave+addr+type — returns 0x04 if already exists.
 //   Timeout period: CMD_RX byte 0x2E: [timeout:2 LE]
 message ModbusSetTimeoutCommandsRequest {
   // Timeout period in milliseconds. Set to 0 to disable the timeout watchdog.
@@ -243,7 +244,7 @@ message ModbusSetTimeoutCommandsRequest {
   // The watchdog is reset by any incoming command (including PingCommand).
   uint32 timeout_ms = 1;
 
-  // Up to 8 write commands to execute when the timeout fires.
+  // Up to 16 write commands to execute when the timeout fires.
   // Commands execute in order. If any command fails (slave timeout, etc.),
   // the remaining commands still execute (best-effort).
   repeated ModbusTimeoutCommand commands = 2;
