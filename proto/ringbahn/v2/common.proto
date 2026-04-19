@@ -72,3 +72,22 @@ message ResetCommand {}
 //   CMD_RX byte 0x04 (no payload)
 //   CMD_TX: [0x04][0x00] (echo command, status OK)
 message IdentifyCommand {}
+
+// Request firmware version and hardware info from a device.
+// Response: GetVersionResponse
+//
+// CAN mapping:
+//   CMD_RX byte 0x0A (no payload, DLC=1)
+//   CMD_TX: [0x0A][0x00][sw_major][sw_minor][sw_patch][hw_rev][fw_variant][0x00]
+//
+// Dev builds report version 0.0.1. Tagged CI builds report the git tag version.
+message GetVersionRequest {}
+
+// Response to GetVersionRequest.
+message GetVersionResponse {
+  uint32          sw_major    = 1; // Software major version (1-20)
+  uint32          sw_minor    = 2; // Software minor version (1-20)
+  uint32          sw_patch    = 3; // Software patch version (1-20)
+  uint32          hw_rev      = 4; // Hardware revision (uint8)
+  FirmwareVariant fw_variant  = 5; // Firmware variant ID
+}

@@ -106,6 +106,7 @@ message BridgeCommand {
     SystemInfoRequest        system_info = 3;       // -> SystemInfoResponse
     ResetCommand             reset = 4;             // -> CommandResult
     IdentifyCommand          identify = 5;          // -> CommandResult
+    GetVersionRequest        get_version = 6;       // -> GetVersionResponse
 
     // --- Subscription management ---
     // For CAN devices (SDADC, ADC Controller, Modbus): forwarded to device's
@@ -208,6 +209,9 @@ message BridgeResponse {
     // System info (response to SystemInfoRequest)
     // Bridge reassembles the 2-frame CAN response transparently.
     SystemInfoResponse       system_info = 3;
+
+    // Version info (response to GetVersionRequest)
+    GetVersionResponse       get_version = 6;
 
     // BLDC movement acknowledgement (includes actual applied speeds)
     BLDCMovementAck          bldc_movement_ack = 20;

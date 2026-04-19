@@ -50,6 +50,17 @@ enum SerialStopBits {
   STOPBITS_2 = 1;
 }
 
+// Firmware variant identifier. Indicates which application firmware is
+// running on a device. Reported in GetVersionResponse.fw_variant.
+enum FirmwareVariant {
+  FIRMWARE_VARIANT_UNSPECIFIED = 0;
+  FIRMWARE_VARIANT_SDADC = 1;              // Sigma-delta ADC
+  FIRMWARE_VARIANT_DIGITAL_OUTPUT = 2;     // Digital/PWM output
+  FIRMWARE_VARIANT_MODBUS_BRIDGE = 3;      // Modbus RTU bridge
+  FIRMWARE_VARIANT_BLDC_MOTOR = 4;         // BLDC motor controller
+  FIRMWARE_VARIANT_ADC_CONTROLLER = 5;     // ADC joystick/button controller
+}
+
 // Modbus function codes for read operations.
 // Used in ModbusReadRequest and ModbusSetPollRequest.
 enum ModbusFunction {
