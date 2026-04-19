@@ -236,6 +236,7 @@ message BridgeResponse {
     TerrabootSendBlockResponse    terraboot_send = 82;
     TerrabootEofResponse          terraboot_eof = 83;
     TerrabootRequestBlockResponse terraboot_request = 84;
+    TerrabootCompleteResponse     terraboot_complete = 85;
     TerrabootGetIdResponse        terraboot_get_id = 86;
     TerrabootIdentifyResponse     terraboot_identify = 87;
     AcknowledgeResponse           acknowledge = 90;
