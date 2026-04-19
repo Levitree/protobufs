@@ -101,6 +101,6 @@ message RenewRequest {
 }
 
 message SetHysteresisRequest {
-  uint32 channel = 1;      // Channel index (0-29)
-  uint32 threshold = 2;    // Threshold in native units
+  uint32 channel = 1; // Channel index (0-29)
+  uint32 threshold = 2; // Threshold in native units
 }

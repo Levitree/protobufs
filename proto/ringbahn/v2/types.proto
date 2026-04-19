@@ -25,22 +25,22 @@ message DeviceUUID {
 //   5 = unknown device UUID (device_uuid not in bridge's device table)
 //   6 = command not valid for device type (e.g. BLDC command to SDADC)
 message CommandResult {
-  bool   success = 1;
+  bool success = 1;
   uint32 error_code = 2;
-  string detail = 3;     // Optional human-readable error description (may be empty)
+  string detail = 3; // Optional human-readable error description (may be empty)
 }
 
 // GPS location and telemetry data.
 // Populated by mobile hubs with GPS hardware (e.g. u-blox module).
 // All fields default to zero/false if no GPS fix is available.
 message GPSState {
-  float  latitude = 1;   // Decimal degrees (positive = north)
-  float  longitude = 2;  // Decimal degrees (positive = east)
-  float  altitude = 3;   // Meters above sea level
-  float  speed = 4;      // Speed in m/s
-  float  heading = 5;    // Heading in degrees (0 = north, 90 = east)
+  float latitude = 1; // Decimal degrees (positive = north)
+  float longitude = 2; // Decimal degrees (positive = east)
+  float altitude = 3; // Meters above sea level
+  float speed = 4; // Speed in m/s
+  float heading = 5; // Heading in degrees (0 = north, 90 = east)
   uint32 satellites = 6; // Number of satellites used for the fix
-  bool   has_fix = 7;    // true if GPS has a valid position fix
+  bool has_fix = 7; // true if GPS has a valid position fix
 }
 
 // Empty response indicating success where no data needs to be returned.

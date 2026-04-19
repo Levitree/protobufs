@@ -42,7 +42,7 @@ import "ringbahn/v2/enums.proto";
 // CAN mapping: CMD_RX byte 0x23: [baud:1][parity:1][stop_bits:1]
 message ModbusConfigureUartRequest {
   SerialBaudRate baud_rate = 1; // Default: SERIAL_BAUD_RATE_19200
-  SerialParity   parity = 2;   // Default: SERIAL_PARITY_NONE
+  SerialParity parity = 2; // Default: SERIAL_PARITY_NONE
   SerialStopBits stop_bits = 3; // Default: SERIAL_STOP_BITS_1
 }
 
@@ -63,15 +63,15 @@ message ModbusConfigureUartRequest {
 //   CMD_TX (small): [0x20][0x00][data...]
 //   Data channel +0x12 (large): [seq:1][frame_idx:1][data:6]
 message ModbusReadRequest {
-  ModbusFunction function = 1;  // Which modbus read function to use
-  uint32 slave_address = 2;     // Modbus slave address (1-247)
-  uint32 start_address = 3;     // Starting register/coil address
-  uint32 quantity = 4;          // Number of registers/coils to read (1-32)
+  ModbusFunction function = 1; // Which modbus read function to use
+  uint32 slave_address = 2; // Modbus slave address (1-247)
+  uint32 start_address = 3; // Starting register/coil address
+  uint32 quantity = 4; // Number of registers/coils to read (1-32)
 }
 
 // Response to a ModbusReadRequest.
 message ModbusReadResponse {
-  ModbusFunction function = 1;  // Echo of the requested function
+  ModbusFunction function = 1; // Echo of the requested function
 
   // Raw response data from the modbus slave:
   //   For holding/input registers: 2 bytes per register, little-endian
@@ -107,8 +107,8 @@ message ModbusReadResponse {
 // CAN mapping: CMD_RX byte 0x22: [slave:1][addr:2 LE][value:1]
 message ModbusWriteCoilRequest {
   uint32 slave_address = 1; // Modbus slave address (1-247)
-  uint32 address = 2;       // Coil address
-  bool   value = 3;         // true = ON (Modbus 0xFF00), false = OFF (Modbus 0x0000)
+  uint32 address = 2; // Coil address
+  bool value = 3; // true = ON (Modbus 0xFF00), false = OFF (Modbus 0x0000)
 }
 
 // Write a single holding register (Modbus function code 0x06).
@@ -117,8 +117,8 @@ message ModbusWriteCoilRequest {
 // CAN mapping: CMD_RX byte 0x21: [slave:1][addr:2 LE][value:2 LE]
 message ModbusWriteRegisterRequest {
   uint32 slave_address = 1; // Modbus slave address (1-247)
-  uint32 address = 2;       // Register address
-  uint32 value = 3;         // Register value (16-bit, stored in uint32 for proto3 compatibility)
+  uint32 address = 2; // Register address
+  uint32 value = 3; // Register value (16-bit, stored in uint32 for proto3 compatibility)
 }
 
 // ============================================================================
@@ -142,11 +142,11 @@ message ModbusWriteRegisterRequest {
 //
 // CAN mapping: CMD_RX byte 0x24: [slot:1][slave:1][func:1][addr:2 LE][qty:1]
 message ModbusSetPollRequest {
-  uint32 slot = 1;           // Slot index 0-15 (each gets its own CAN data channel)
-  uint32 slave_address = 2;  // Modbus slave to poll (1-247)
+  uint32 slot = 1; // Slot index 0-15 (each gets its own CAN data channel)
+  uint32 slave_address = 2; // Modbus slave to poll (1-247)
   ModbusFunction function = 3; // Read function to use
-  uint32 start_address = 4;  // Starting register address
-  uint32 quantity = 5;       // Number of registers to read per poll (1-24)
+  uint32 start_address = 4; // Starting register address
+  uint32 quantity = 5; // Number of registers to read per poll (1-24)
 }
 
 // Deactivate a poll slot. Stops polling and frees the slot for reuse.
@@ -194,9 +194,9 @@ message ModbusPollSlotConfig {
 //
 // CAN mapping: CMD_RX byte 0x27: [slot:1][flags:1][force_interval:1]
 message ModbusSetPollConfigRequest {
-  uint32 slot = 1;              // Slot index 0-15 (must already be active)
-  uint32 flags = 2;             // Bitmask: bit0=SMART (enable change detection + delta)
-  uint32 force_interval = 3;    // Full report every N polls (0 = default 10)
+  uint32 slot = 1; // Slot index 0-15 (must already be active)
+  uint32 flags = 2; // Bitmask: bit0=SMART (enable change detection + delta)
+  uint32 force_interval = 3; // Full report every N polls (0 = default 10)
 }
 
 // Query the current polling state for a slot.
@@ -210,11 +210,11 @@ message ModbusGetPollStatusRequest {
 
 // Response to ModbusGetPollStatusRequest.
 message ModbusPollStatusResponse {
-  uint32 slot = 1;            // Echo of requested slot
-  uint32 flags = 2;           // Current POLL_FLAG_* flags
-  uint32 force_counter = 3;   // Polls remaining until next forced full report
-  uint32 force_interval = 4;  // Configured force interval
-  bool active = 5;            // Whether the slot is active
+  uint32 slot = 1; // Echo of requested slot
+  uint32 flags = 2; // Current POLL_FLAG_* flags
+  uint32 force_counter = 3; // Polls remaining until next forced full report
+  uint32 force_interval = 4; // Configured force interval
+  bool active = 5; // Whether the slot is active
 }
 
 // ============================================================================

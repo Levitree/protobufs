@@ -13,7 +13,7 @@ enum SerialBaudRate {
   SERIAL_BAUD_RATE_2400 = 2;
   SERIAL_BAUD_RATE_4800 = 3;
   SERIAL_BAUD_RATE_9600 = 4;
-  SERIAL_BAUD_RATE_19200 = 5;   // Default
+  SERIAL_BAUD_RATE_19200 = 5; // Default
   SERIAL_BAUD_RATE_38400 = 6;
   SERIAL_BAUD_RATE_57600 = 7;
   SERIAL_BAUD_RATE_115200 = 8;
@@ -22,7 +22,7 @@ enum SerialBaudRate {
 // Parity settings
 enum SerialParity {
   SERIAL_PARITY_UNSPECIFIED = 0;
-  SERIAL_PARITY_NONE = 1;  // Default
+  SERIAL_PARITY_NONE = 1; // Default
   SERIAL_PARITY_ODD = 2;
   SERIAL_PARITY_EVEN = 3;
 }
@@ -30,7 +30,7 @@ enum SerialParity {
 // Stop bits
 enum SerialStopBits {
   SERIAL_STOP_BITS_UNSPECIFIED = 0;
-  SERIAL_STOP_BITS_1 = 1;   // Default
+  SERIAL_STOP_BITS_1 = 1; // Default
   SERIAL_STOP_BITS_2 = 2;
 }
 
@@ -67,9 +67,9 @@ message ModbusBridgeDeviceCommand {
 
 // Response: CommandResult
 message ConfigureUartRequest {
-  SerialBaudRate baud_rate = 1;   // Baud rate (default: SERIAL_BAUD_RATE_19200)
-  SerialParity parity = 2;        // Parity (default: SERIAL_PARITY_NONE)
-  SerialStopBits stop_bits = 3;   // Stop bits (default: SERIAL_STOP_BITS_1)
+  SerialBaudRate baud_rate = 1; // Baud rate (default: SERIAL_BAUD_RATE_19200)
+  SerialParity parity = 2; // Parity (default: SERIAL_PARITY_NONE)
+  SerialStopBits stop_bits = 3; // Stop bits (default: SERIAL_STOP_BITS_1)
 }
 
 // ===== Modbus Read Commands =====
@@ -176,8 +176,8 @@ message TimeoutWriteCommand {
 // Configure commands to execute when ping timeout occurs
 // Response: CommandResult
 message SetTimeoutCommandsRequest {
-  uint32 timeout_ms = 1;  // Timeout period in ms (0 = disable, default: 20000)
-  repeated TimeoutWriteCommand commands = 2;  // Max 8 commands
+  uint32 timeout_ms = 1; // Timeout period in ms (0 = disable, default: 20000)
+  repeated TimeoutWriteCommand commands = 2; // Max 8 commands
 }
 
 // Clear timeout configuration
@@ -194,8 +194,8 @@ message GetTimeoutConfigRequest {
 
 // Response with current timeout configuration
 message TimeoutConfigResponse {
-  uint32 timeout_ms = 1;           // Current timeout period (0 = disabled)
-  uint32 command_count = 2;        // Number of stored commands
-  bool timeout_active = 3;         // True if currently in timeout state
+  uint32 timeout_ms = 1; // Current timeout period (0 = disabled)
+  uint32 command_count = 2; // Number of stored commands
+  bool timeout_active = 3; // True if currently in timeout state
   uint32 last_ping_elapsed_ms = 4; // Milliseconds since last ping
 }

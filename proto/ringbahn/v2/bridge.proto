@@ -3,12 +3,12 @@ syntax = "proto3";
 package ringbahn.v2;
 
 import "ringbahn/v2/common.proto";
-import "ringbahn/v2/subscription.proto";
-import "ringbahn/v2/events.proto";
 import "ringbahn/v2/device_bldc.proto";
 import "ringbahn/v2/device_digital_output.proto";
 import "ringbahn/v2/device_modbus.proto";
 import "ringbahn/v2/device_routing.proto";
+import "ringbahn/v2/events.proto";
+import "ringbahn/v2/subscription.proto";
 import "ringbahn/v2/types.proto";
 
 // ============================================================================
@@ -102,11 +102,11 @@ message BridgeCommand {
   oneof command {
     // --- Common device commands (any device type) ---
     // Forwarded to the device's CMD_RX channel as CAN bytes 0x01-0x04.
-    PingCommand              ping = 2;              // -> CommandResult
-    SystemInfoRequest        system_info = 3;       // -> SystemInfoResponse
-    ResetCommand             reset = 4;             // -> CommandResult
-    IdentifyCommand          identify = 5;          // -> CommandResult
-    GetVersionRequest        get_version = 6;       // -> GetVersionResponse
+    PingCommand ping = 2; // -> CommandResult
+    SystemInfoRequest system_info = 3; // -> SystemInfoResponse
+    ResetCommand reset = 4; // -> CommandResult
+    IdentifyCommand identify = 5; // -> CommandResult
+    GetVersionRequest get_version = 6; // -> GetVersionResponse
 
     // --- Subscription management ---
     // For CAN devices (SDADC, ADC Controller, Modbus): forwarded to device's
@@ -116,65 +116,65 @@ message BridgeCommand {
     //   channel 0: Device presence (DevicePresenceEvent)
     //   channel 1: GPS state (GPSStateEvent)
     //   channels 2-29: Reserved
-    SubscribeRequest         subscribe = 10;        // -> CommandResult
-    UnsubscribeRequest       unsubscribe = 11;      // -> CommandResult
-    SetHysteresisRequest     set_hysteresis = 12;   // -> CommandResult
-    RenewRequest             renew = 13;            // -> CommandResult
+    SubscribeRequest subscribe = 10; // -> CommandResult
+    UnsubscribeRequest unsubscribe = 11; // -> CommandResult
+    SetHysteresisRequest set_hysteresis = 12; // -> CommandResult
+    RenewRequest renew = 13; // -> CommandResult
 
     // --- BLDC motor commands (DEVICE_TYPE_BLDC only) ---
     // Forwarded as CAN bytes 0x20-0x21 on CMD_RX.
-    BLDCMovementCommand      bldc_movement = 20;    // -> BLDCMovementAck
+    BLDCMovementCommand bldc_movement = 20; // -> BLDCMovementAck
     BLDCEmergencyStopCommand bldc_emergency_stop = 21; // -> CommandResult
 
     // --- Digital output commands (DEVICE_TYPE_DIGITAL_OUT only) ---
     // Forwarded as CAN bytes 0x20-0x21 on CMD_RX.
-    SetPWMChannelRequest     set_pwm_channel = 30;  // -> CommandResult
-    SetAllChannelsRequest    set_all_channels = 31; // -> CommandResult
+    SetPWMChannelRequest set_pwm_channel = 30; // -> CommandResult
+    SetAllChannelsRequest set_all_channels = 31; // -> CommandResult
 
     // --- Modbus bridge commands (DEVICE_TYPE_RS485_BRIDGE only) ---
     // Bridge translates into CAN bytes 0x20-0x2E on CMD_RX.
-    ModbusReadRequest                   modbus_read = 40;            // -> ModbusReadResponse
-    ModbusWriteCoilRequest              modbus_write_coil = 41;      // -> CommandResult
-    ModbusWriteRegisterRequest          modbus_write_register = 42;  // -> CommandResult
-    ModbusSetPollRequest                modbus_set_poll = 44;        // -> CommandResult
-    ModbusClearPollRequest              modbus_clear_poll = 45;      // -> CommandResult
-    ModbusGetPollsRequest               modbus_get_polls = 46;       // -> ModbusPollConfigResponse
-    ModbusConfigureUartRequest          modbus_configure_uart = 47;  // -> CommandResult
+    ModbusReadRequest modbus_read = 40; // -> ModbusReadResponse
+    ModbusWriteCoilRequest modbus_write_coil = 41; // -> CommandResult
+    ModbusWriteRegisterRequest modbus_write_register = 42; // -> CommandResult
+    ModbusSetPollRequest modbus_set_poll = 44; // -> CommandResult
+    ModbusClearPollRequest modbus_clear_poll = 45; // -> CommandResult
+    ModbusGetPollsRequest modbus_get_polls = 46; // -> ModbusPollConfigResponse
+    ModbusConfigureUartRequest modbus_configure_uart = 47; // -> CommandResult
 
     // Modbus smart polling (DEVICE_TYPE_RS485_BRIDGE only)
-    ModbusSetPollConfigRequest          modbus_set_poll_config = 51; // -> CommandResult
-    ModbusGetPollStatusRequest          modbus_get_poll_status = 52; // -> ModbusPollStatusResponse
+    ModbusSetPollConfigRequest modbus_set_poll_config = 51; // -> CommandResult
+    ModbusGetPollStatusRequest modbus_get_poll_status = 52; // -> ModbusPollStatusResponse
 
     // Modbus timeout safety (DEVICE_TYPE_RS485_BRIDGE only)
-    ModbusSetTimeoutCommandsRequest     modbus_set_timeout = 48;     // -> CommandResult
-    ModbusClearTimeoutCommandsRequest   modbus_clear_timeout = 49;   // -> CommandResult
+    ModbusSetTimeoutCommandsRequest modbus_set_timeout = 48; // -> CommandResult
+    ModbusClearTimeoutCommandsRequest modbus_clear_timeout = 49; // -> CommandResult
 
     // --- Bridge-local commands (device_uuid = bridge's own UUID) ---
     // Handled by the bridge, not forwarded to CAN.
-    GetAttachedDevicesRequest  get_attached_devices = 60; // -> AttachedDevicesResponse
-    GetBridgeStateRequest      get_bridge_state = 61;     // -> BridgeState
-    BootloaderCommand          bootloader = 62;           // -> CommandResult
+    GetAttachedDevicesRequest get_attached_devices = 60; // -> AttachedDevicesResponse
+    GetBridgeStateRequest get_bridge_state = 61; // -> BridgeState
+    BootloaderCommand bootloader = 62; // -> CommandResult
 
     // --- Bridge firmware OTA (device_uuid = bridge's own UUID) ---
     // Updates the bridge itself. Identical semantics to v1.
-    InternalOtaBeginRequest    ota_begin = 70;   // -> InternalOtaStatus
-    InternalOtaWriteRequest    ota_write = 71;   // -> InternalOtaStatus
-    InternalOtaEndRequest      ota_end = 72;     // -> InternalOtaStatus
-    InternalOtaAbortRequest    ota_abort = 73;   // -> InternalOtaStatus
-    InternalOtaSetBootRequest  ota_set_boot = 74; // -> InternalOtaStatus
+    InternalOtaBeginRequest ota_begin = 70; // -> InternalOtaStatus
+    InternalOtaWriteRequest ota_write = 71; // -> InternalOtaStatus
+    InternalOtaEndRequest ota_end = 72; // -> InternalOtaStatus
+    InternalOtaAbortRequest ota_abort = 73; // -> InternalOtaStatus
+    InternalOtaSetBootRequest ota_set_boot = 74; // -> InternalOtaStatus
 
     // --- Terraboot CAN bootloader (device_uuid = bridge's own UUID) ---
     // Bridge proxies bootloader commands to CAN devices.
     // Target device identified by device_uuid INSIDE the protobuf message
     // (not by device_uuid, which points to the bridge).
-    TerrabootEnterRequest        terraboot_enter = 80;    // -> AcknowledgeResponse
-    TerrabootConnectRequest      terraboot_connect = 81;  // -> TerrabootConnectResponse
-    TerrabootSendBlockRequest    terraboot_send = 82;     // -> TerrabootSendBlockResponse
-    TerrabootEofRequest          terraboot_eof = 83;      // -> TerrabootEofResponse
-    TerrabootRequestBlockRequest terraboot_request = 84;  // -> TerrabootRequestBlockResponse
-    TerrabootCompleteRequest     terraboot_complete = 85; // -> TerrabootCompleteResponse
-    TerrabootGetIdRequest        terraboot_get_id = 86;   // -> TerrabootGetIdResponse
-    TerrabootIdentifyRequest     terraboot_identify = 87; // -> TerrabootIdentifyResponse
+    TerrabootEnterRequest terraboot_enter = 80; // -> AcknowledgeResponse
+    TerrabootConnectRequest terraboot_connect = 81; // -> TerrabootConnectResponse
+    TerrabootSendBlockRequest terraboot_send = 82; // -> TerrabootSendBlockResponse
+    TerrabootEofRequest terraboot_eof = 83; // -> TerrabootEofResponse
+    TerrabootRequestBlockRequest terraboot_request = 84; // -> TerrabootRequestBlockResponse
+    TerrabootCompleteRequest terraboot_complete = 85; // -> TerrabootCompleteResponse
+    TerrabootGetIdRequest terraboot_get_id = 86; // -> TerrabootGetIdResponse
+    TerrabootIdentifyRequest terraboot_identify = 87; // -> TerrabootIdentifyResponse
   }
 }
 
@@ -204,42 +204,42 @@ message BridgeResponse {
   oneof response {
     // Generic success/error (used by most commands: ping, reset, identify,
     // subscribe, set_hysteresis, emergency_stop, set_pwm, modbus writes, etc.)
-    CommandResult            result = 2;
+    CommandResult result = 2;
 
     // System info (response to SystemInfoRequest)
     // Bridge reassembles the 2-frame CAN response transparently.
-    SystemInfoResponse       system_info = 3;
+    SystemInfoResponse system_info = 3;
 
     // Version info (response to GetVersionRequest)
-    GetVersionResponse       get_version = 6;
+    GetVersionResponse get_version = 6;
 
     // BLDC movement acknowledgement (includes actual applied speeds)
-    BLDCMovementAck          bldc_movement_ack = 20;
+    BLDCMovementAck bldc_movement_ack = 20;
 
     // Digital output state readback
-    DigitalOutputState       digital_output_state = 30;
+    DigitalOutputState digital_output_state = 30;
 
     // Modbus responses
-    ModbusReadResponse           modbus_read = 40;
-    ModbusPollConfigResponse     modbus_polls = 46;
-    ModbusPollStatusResponse     modbus_poll_status = 52;
+    ModbusReadResponse modbus_read = 40;
+    ModbusPollConfigResponse modbus_polls = 46;
+    ModbusPollStatusResponse modbus_poll_status = 52;
 
     // Bridge-local responses
-    AttachedDevicesResponse   attached_devices = 60;
-    BridgeState               bridge_state = 61;
+    AttachedDevicesResponse attached_devices = 60;
+    BridgeState bridge_state = 61;
 
     // OTA progress
-    InternalOtaStatus         ota_status = 70;
+    InternalOtaStatus ota_status = 70;
 
     // Terraboot responses
-    TerrabootConnectResponse      terraboot_connect = 81;
-    TerrabootSendBlockResponse    terraboot_send = 82;
-    TerrabootEofResponse          terraboot_eof = 83;
+    TerrabootConnectResponse terraboot_connect = 81;
+    TerrabootSendBlockResponse terraboot_send = 82;
+    TerrabootEofResponse terraboot_eof = 83;
     TerrabootRequestBlockResponse terraboot_request = 84;
-    TerrabootCompleteResponse     terraboot_complete = 85;
-    TerrabootGetIdResponse        terraboot_get_id = 86;
-    TerrabootIdentifyResponse     terraboot_identify = 87;
-    AcknowledgeResponse           acknowledge = 90;
+    TerrabootCompleteResponse terraboot_complete = 85;
+    TerrabootGetIdResponse terraboot_get_id = 86;
+    TerrabootIdentifyResponse terraboot_identify = 87;
+    AcknowledgeResponse acknowledge = 90;
   }
 }
 
@@ -310,40 +310,40 @@ message DeviceEvent {
     // SDADC channel value update (one per channel per event).
     // device_uuid in frame identifies which SDADC device.
     // DeviceEvent.channel identifies which measurement channel (0-11).
-    SDADCChannelEvent        sdadc = 10;
+    SDADCChannelEvent sdadc = 10;
 
     // ADC controller joystick position update.
     // channel 0 = left joystick, channel 1 = right joystick.
-    JoystickEvent            joystick = 20;
+    JoystickEvent joystick = 20;
 
     // ADC controller switch state change.
     // channel 2 = switches (bitmask of all switch states).
-    SwitchEvent              switches = 21;
+    SwitchEvent switches = 21;
 
     // --- Autonomous state change events ---
 
     // BLDC motor state changed without a command (e.g. timeout auto-stop).
-    BLDCStateEvent           bldc_state = 30;
+    BLDCStateEvent bldc_state = 30;
 
     // Digital output state changed autonomously (reserved for future use).
-    DigitalOutputStateEvent  digital_output_state = 40;
+    DigitalOutputStateEvent digital_output_state = 40;
 
     // --- Modbus events ---
 
     // Modbus poll slot completed a read cycle (bridge reassembled multi-frame burst).
     // device_uuid in frame identifies which modbus bridge device.
-    ModbusPollResultEvent    modbus_poll = 50;
+    ModbusPollResultEvent modbus_poll = 50;
 
     // --- Bridge-generated events ---
 
     // Device appeared or disappeared on the CAN bus.
     // SPECIAL: frame device_uuid = bridge UUID (bridge generated this).
     // The device identity is in DevicePresenceEvent.device_uuid.
-    DevicePresenceEvent      presence = 60;
+    DevicePresenceEvent presence = 60;
 
     // GPS state changed (fix acquired/lost).
     // device_uuid in frame = bridge UUID.
     // Only sent to transports subscribed to bridge channel 1.
-    GPSStateEvent            gps_state = 70;
+    GPSStateEvent gps_state = 70;
   }
 }

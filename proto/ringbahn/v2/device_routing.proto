@@ -39,8 +39,8 @@ message AttachedDevicesResponse {
 
 // Information about a single discovered device on the CAN bus.
 message AttachedDevice {
-  DeviceType device_type = 1;    // Device variant (SDADC, BLDC, etc.)
-  DeviceUUID device_uuid = 2;    // 6-byte manufacturing UUID
+  DeviceType device_type = 1; // Device variant (SDADC, BLDC, etc.)
+  DeviceUUID device_uuid = 2; // 6-byte manufacturing UUID
 
   // NEW in v2: Current subscription state for this device.
   // Bitmask of channels the PC has subscribed to via SubscribeRequest.
@@ -117,7 +117,7 @@ message BootloaderCommand {
 // Begin an OTA firmware update session.
 // Response: InternalOtaStatus
 message InternalOtaBeginRequest {
-  uint32 image_size = 1;       // Total firmware image size in bytes
+  uint32 image_size = 1; // Total firmware image size in bytes
   uint32 firmware_version = 2; // Monotonic version number (for rollback detection)
 }
 
@@ -127,7 +127,7 @@ message InternalOtaBeginRequest {
 // Chunks must be sent sequentially with correct offsets (no gaps, no overlaps).
 // The bridge validates that offset matches next_offset from the previous response.
 message InternalOtaWriteRequest {
-  bytes  data = 1;   // Firmware chunk (up to 4096 bytes per message)
+  bytes data = 1; // Firmware chunk (up to 4096 bytes per message)
   uint32 offset = 2; // Byte offset within the image
 }
 
@@ -149,9 +149,9 @@ message InternalOtaSetBootRequest {}
 // Progress and status information for OTA operations.
 message InternalOtaStatus {
   uint32 bytes_written = 1; // Total bytes written to OTA partition so far
-  uint32 free_space = 2;    // Remaining space in the OTA partition
-  bytes  sha256_hash = 3;   // SHA256 hash (32 bytes, only after ota_end with validate=true)
-  uint32 next_offset = 4;   // Expected offset for the next ota_write call
+  uint32 free_space = 2; // Remaining space in the OTA partition
+  bytes sha256_hash = 3; // SHA256 hash (32 bytes, only after ota_end with validate=true)
+  uint32 next_offset = 4; // Expected offset for the next ota_write call
 }
 
 // ============================================================================
@@ -202,14 +202,14 @@ message TerrabootConnectRequest {
 // Response to TerrabootConnectRequest.
 // Contains everything the PC needs to know to flash this device.
 message TerrabootConnectResponse {
-  uint32 protocol_version = 1;  // Terraboot protocol version (for compatibility checks)
-  uint32 start_address = 2;     // Flash start address for application code
-  uint32 block_size = 3;        // Size of each firmware block (typically 256 bytes)
-  uint32 flash_size = 4;        // Total flash available for application code
-  string mcu_type = 5;          // MCU identification (e.g. "STM32F103C8")
+  uint32 protocol_version = 1; // Terraboot protocol version (for compatibility checks)
+  uint32 start_address = 2; // Flash start address for application code
+  uint32 block_size = 3; // Size of each firmware block (typically 256 bytes)
+  uint32 flash_size = 4; // Total flash available for application code
+  string mcu_type = 5; // MCU identification (e.g. "STM32F103C8")
   string terraboot_version = 6; // Bootloader version string
-  string app_variant = 7;       // Currently installed application variant name
-  string app_version = 8;       // Currently installed application version string
+  string app_variant = 7; // Currently installed application variant name
+  string app_version = 8; // Currently installed application version string
 }
 
 // Send a firmware block to the device's flash.
@@ -218,7 +218,7 @@ message TerrabootConnectResponse {
 message TerrabootSendBlockRequest {
   DeviceUUID device_uuid = 1;
   uint32 block_address = 2; // Flash address for this block (must be aligned to block_size)
-  bytes  data = 3;          // Block data (exactly block_size bytes, typically 256)
+  bytes data = 3; // Block data (exactly block_size bytes, typically 256)
 }
 
 // Response to TerrabootSendBlockRequest.
@@ -249,7 +249,7 @@ message TerrabootRequestBlockRequest {
 // Response to TerrabootRequestBlockRequest.
 message TerrabootRequestBlockResponse {
   uint32 block_address = 1; // Echo of the requested address
-  bytes  data = 2;          // Block data read from flash (block_size bytes)
+  bytes data = 2; // Block data read from flash (block_size bytes)
 }
 
 // Finalize the bootloader session.

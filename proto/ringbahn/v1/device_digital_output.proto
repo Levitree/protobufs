@@ -25,7 +25,7 @@ message DigitalOutputDeviceCommand {
 // Response: CommandResult
 message SetPWMChannelRequest {
   int32 channel_number = 1; // Channel 0-7 (max 8 channels per device)
-  uint32 duty_cycle = 2;    // PWM duty cycle (0-255)
+  uint32 duty_cycle = 2; // PWM duty cycle (0-255)
 }
 
 // Response: CommandResult

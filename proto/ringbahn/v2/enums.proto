@@ -5,15 +5,15 @@ package ringbahn.v2;
 // Device variant types. Assigned at firmware build time.
 // The bridge discovers device types during admin enumeration on the CAN bus.
 enum DeviceType {
-  DEVICE_TYPE_UNSPECIFIED = 0;       // Unknown or uninitialized
-  DEVICE_TYPE_ROUTING = 1;          // PC-CAN bridge (routing device). Was HUB in v1.
-  reserved 2;                        // Was DEVICE_TYPE_NODE — now represented by RoutingDeviceType
-  DEVICE_TYPE_SD_ADC = 3;           // Sigma-delta ADC (AD4111-based, 8 current + 4 voltage)
-  DEVICE_TYPE_DIGITAL_OUT = 4;      // PWM output bridge (8 channels, MCP4131)
-  DEVICE_TYPE_RS485_BRIDGE = 5;     // Modbus RTU bridge (RS485 UART to CAN)
-  DEVICE_TYPE_BLDC = 6;             // Brushless DC motor controller (2 channels)
-  DEVICE_TYPE_BLDC_CONTROLLER = 7;  // Joystick/button controller for BLDC board
-  DEVICE_TYPE_TERRABOOT = 254;      // Device is in bootloader mode (no application running)
+  DEVICE_TYPE_UNSPECIFIED = 0; // Unknown or uninitialized
+  DEVICE_TYPE_ROUTING = 1; // PC-CAN bridge (routing device). Was HUB in v1.
+  reserved 2; // Was DEVICE_TYPE_NODE — now represented by RoutingDeviceType
+  DEVICE_TYPE_SD_ADC = 3; // Sigma-delta ADC (AD4111-based, 8 current + 4 voltage)
+  DEVICE_TYPE_DIGITAL_OUT = 4; // PWM output bridge (8 channels, MCP4131)
+  DEVICE_TYPE_RS485_BRIDGE = 5; // Modbus RTU bridge (RS485 UART to CAN)
+  DEVICE_TYPE_BLDC = 6; // Brushless DC motor controller (2 channels)
+  DEVICE_TYPE_BLDC_CONTROLLER = 7; // Joystick/button controller for BLDC board
+  DEVICE_TYPE_TERRABOOT = 254; // Device is in bootloader mode (no application running)
 }
 
 // Distinguishes how a routing device connects to the host.
@@ -21,8 +21,8 @@ enum DeviceType {
 // the difference is the transport to the host (USB/BLE vs Xbee).
 enum RoutingDeviceType {
   ROUTING_DEVICE_TYPE_UNSPECIFIED = 0;
-  ROUTING_DEVICE_TYPE_HUB = 1;    // Direct connection (USB/BLE)
-  ROUTING_DEVICE_TYPE_NODE = 2;   // Remote connection (Xbee)
+  ROUTING_DEVICE_TYPE_HUB = 1; // Direct connection (USB/BLE)
+  ROUTING_DEVICE_TYPE_NODE = 2; // Remote connection (Xbee)
 }
 
 // RS485 UART baud rate options for modbus bridge configuration.
@@ -32,7 +32,7 @@ enum SerialBaudRate {
   SERIAL_BAUD_RATE_2400 = 2;
   SERIAL_BAUD_RATE_4800 = 3;
   SERIAL_BAUD_RATE_9600 = 4;
-  SERIAL_BAUD_RATE_19200 = 5;   // Default for most modbus slaves
+  SERIAL_BAUD_RATE_19200 = 5; // Default for most modbus slaves
   SERIAL_BAUD_RATE_38400 = 6;
   SERIAL_BAUD_RATE_57600 = 7;
   SERIAL_BAUD_RATE_115200 = 8;
@@ -41,7 +41,7 @@ enum SerialBaudRate {
 // UART parity options.
 enum SerialParity {
   SERIAL_PARITY_UNSPECIFIED = 0;
-  SERIAL_PARITY_NONE = 1;  // Default
+  SERIAL_PARITY_NONE = 1; // Default
   SERIAL_PARITY_ODD = 2;
   SERIAL_PARITY_EVEN = 3;
 }
@@ -49,7 +49,7 @@ enum SerialParity {
 // UART stop bit options.
 enum SerialStopBits {
   SERIAL_STOP_BITS_UNSPECIFIED = 0;
-  SERIAL_STOP_BITS_1 = 1;   // Default
+  SERIAL_STOP_BITS_1 = 1; // Default
   SERIAL_STOP_BITS_2 = 2;
 }
 
@@ -57,19 +57,19 @@ enum SerialStopBits {
 // running on a device. Reported in GetVersionResponse.fw_variant.
 enum FirmwareVariant {
   FIRMWARE_VARIANT_UNSPECIFIED = 0;
-  FIRMWARE_VARIANT_SDADC = 1;              // Sigma-delta ADC
-  FIRMWARE_VARIANT_DIGITAL_OUTPUT = 2;     // Digital/PWM output
-  FIRMWARE_VARIANT_MODBUS_BRIDGE = 3;      // Modbus RTU bridge
-  FIRMWARE_VARIANT_BLDC_MOTOR = 4;         // BLDC motor controller
-  FIRMWARE_VARIANT_ADC_CONTROLLER = 5;     // ADC joystick/button controller
+  FIRMWARE_VARIANT_SDADC = 1; // Sigma-delta ADC
+  FIRMWARE_VARIANT_DIGITAL_OUTPUT = 2; // Digital/PWM output
+  FIRMWARE_VARIANT_MODBUS_BRIDGE = 3; // Modbus RTU bridge
+  FIRMWARE_VARIANT_BLDC_MOTOR = 4; // BLDC motor controller
+  FIRMWARE_VARIANT_ADC_CONTROLLER = 5; // ADC joystick/button controller
 }
 
 // Modbus function codes for read operations.
 // Used in ModbusReadRequest and ModbusSetPollRequest.
 enum ModbusFunction {
   MODBUS_FUNCTION_UNSPECIFIED = 0;
-  MODBUS_FUNCTION_READ_COILS = 1;              // FC 0x01 - Read coils
-  MODBUS_FUNCTION_READ_DISCRETE_INPUTS = 2;    // FC 0x02 - Read discrete inputs
-  MODBUS_FUNCTION_READ_HOLDING_REGISTERS = 3;  // FC 0x03 - Read holding registers
-  MODBUS_FUNCTION_READ_INPUT_REGISTERS = 4;    // FC 0x04 - Read input registers
+  MODBUS_FUNCTION_READ_COILS = 1; // FC 0x01 - Read coils
+  MODBUS_FUNCTION_READ_DISCRETE_INPUTS = 2; // FC 0x02 - Read discrete inputs
+  MODBUS_FUNCTION_READ_HOLDING_REGISTERS = 3; // FC 0x03 - Read holding registers
+  MODBUS_FUNCTION_READ_INPUT_REGISTERS = 4; // FC 0x04 - Read input registers
 }

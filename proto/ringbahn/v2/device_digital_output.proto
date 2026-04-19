@@ -22,7 +22,7 @@ package ringbahn.v2;
 // Set the duty cycle of a single PWM channel.
 // Response: CommandResult
 message SetPWMChannelRequest {
-  uint32 channel = 1;    // Channel index 0-7 (out of range = error)
+  uint32 channel = 1; // Channel index 0-7 (out of range = error)
   uint32 duty_cycle = 2; // PWM duty cycle: 0 = fully off, 255 = fully on
 }
 

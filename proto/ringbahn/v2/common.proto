@@ -36,10 +36,10 @@ message SystemInfoRequest {}
 // device_uuid is promoted to a top-level field. Field numbers differ from v1
 // (clean break, not wire-compatible).
 message SystemInfoResponse {
-  uint32            hardware_version    = 1; // Hardware revision number
-  uint32            software_version    = 2; // Firmware version (monotonic, higher = newer)
-  DeviceType        device_type         = 3; // Device variant (SDADC, BLDC, etc.)
-  DeviceUUID        device_uuid         = 4; // Manufacturing UUID (same as Ringbahn frame device_uuid)
+  uint32 hardware_version = 1; // Hardware revision number
+  uint32 software_version = 2; // Firmware version (monotonic, higher = newer)
+  DeviceType device_type = 3; // Device variant (SDADC, BLDC, etc.)
+  DeviceUUID device_uuid = 4; // Manufacturing UUID (same as Ringbahn frame device_uuid)
   RoutingDeviceType routing_device_type = 5; // Hub vs Node (only meaningful when device_type == ROUTING)
 }
 
@@ -85,9 +85,9 @@ message GetVersionRequest {}
 
 // Response to GetVersionRequest.
 message GetVersionResponse {
-  uint32          sw_major    = 1; // Software major version (1-20)
-  uint32          sw_minor    = 2; // Software minor version (1-20)
-  uint32          sw_patch    = 3; // Software patch version (1-20)
-  uint32          hw_rev      = 4; // Hardware revision (uint8)
-  FirmwareVariant fw_variant  = 5; // Firmware variant ID
+  uint32 sw_major = 1; // Software major version (1-20)
+  uint32 sw_minor = 2; // Software minor version (1-20)
+  uint32 sw_patch = 3; // Software patch version (1-20)
+  uint32 hw_rev = 4; // Hardware revision (uint8)
+  FirmwareVariant fw_variant = 5; // Firmware variant ID
 }

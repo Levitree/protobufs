@@ -102,7 +102,7 @@ message SwitchEvent {
 // BLDCMovementAck as a synchronous response instead).
 //
 message BLDCStateEvent {
-  bool   tracks_active = 1;    // true if any motor is still running
+  bool tracks_active = 1; // true if any motor is still running
   sint32 ch1_actual_speed = 2; // Current speed of channel 1 (-100 to +100, 0 after auto-stop)
   sint32 ch2_actual_speed = 3; // Current speed of channel 2
 }
@@ -143,7 +143,7 @@ message DigitalOutputStateEvent {
 // expected frames based on the poll slot's quantity), then emits this event.
 //
 message ModbusPollResultEvent {
-  uint32 slot = 1;          // Poll slot index (0-15) that produced this result
+  uint32 slot = 1; // Poll slot index (0-15) that produced this result
   uint32 slave_address = 2; // Modbus slave address that was polled
   uint32 start_address = 3; // Starting register address of the poll range
 
@@ -199,9 +199,9 @@ message ModbusPollResultEvent {
 //     (implementation-defined threshold, typically 3-5 missed at 1Hz = 3-5 seconds).
 //
 message DevicePresenceEvent {
-  DeviceType device_type = 1;  // Type of the device (SDADC, BLDC, etc.)
-  DeviceUUID device_uuid = 2;  // 6-byte UUID of the device that appeared/disappeared
-  bool       online = 3;       // true = device appeared, false = device lost (heartbeat timeout)
+  DeviceType device_type = 1; // Type of the device (SDADC, BLDC, etc.)
+  DeviceUUID device_uuid = 2; // 6-byte UUID of the device that appeared/disappeared
+  bool online = 3; // true = device appeared, false = device lost (heartbeat timeout)
 }
 
 // ============================================================================
