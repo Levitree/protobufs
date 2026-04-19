@@ -41,9 +41,9 @@ import "ringbahn/v2/enums.proto";
 //
 // CAN mapping: CMD_RX byte 0x23: [baud:1][parity:1][stop_bits:1]
 message ModbusConfigureUartRequest {
-  SerialBaudRate baud_rate = 1; // Default: BAUD_19200
-  SerialParity   parity = 2;   // Default: PARITY_NONE
-  SerialStopBits stop_bits = 3; // Default: STOPBITS_1
+  SerialBaudRate baud_rate = 1; // Default: SERIAL_BAUD_RATE_19200
+  SerialParity   parity = 2;   // Default: SERIAL_PARITY_NONE
+  SerialStopBits stop_bits = 3; // Default: SERIAL_STOP_BITS_1
 }
 
 // ============================================================================

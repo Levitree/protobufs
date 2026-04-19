@@ -6,29 +6,32 @@ import "ringbahn/v1/device_common.proto";
 
 // ===== Serial Port Configuration Enums =====
 
-// Standard baud rates (0-7)
+// Standard baud rates
 enum SerialBaudRate {
-  BAUD_1200 = 0;
-  BAUD_2400 = 1;
-  BAUD_4800 = 2;
-  BAUD_9600 = 3;
-  BAUD_19200 = 4;   // Default
-  BAUD_38400 = 5;
-  BAUD_57600 = 6;
-  BAUD_115200 = 7;
+  SERIAL_BAUD_RATE_UNSPECIFIED = 0;
+  SERIAL_BAUD_RATE_1200 = 1;
+  SERIAL_BAUD_RATE_2400 = 2;
+  SERIAL_BAUD_RATE_4800 = 3;
+  SERIAL_BAUD_RATE_9600 = 4;
+  SERIAL_BAUD_RATE_19200 = 5;   // Default
+  SERIAL_BAUD_RATE_38400 = 6;
+  SERIAL_BAUD_RATE_57600 = 7;
+  SERIAL_BAUD_RATE_115200 = 8;
 }
 
 // Parity settings
 enum SerialParity {
-  PARITY_NONE = 0;  // Default
-  PARITY_ODD = 1;
-  PARITY_EVEN = 2;
+  SERIAL_PARITY_UNSPECIFIED = 0;
+  SERIAL_PARITY_NONE = 1;  // Default
+  SERIAL_PARITY_ODD = 2;
+  SERIAL_PARITY_EVEN = 3;
 }
 
 // Stop bits
 enum SerialStopBits {
-  STOPBITS_1 = 0;   // Default
-  STOPBITS_2 = 1;
+  SERIAL_STOP_BITS_UNSPECIFIED = 0;
+  SERIAL_STOP_BITS_1 = 1;   // Default
+  SERIAL_STOP_BITS_2 = 2;
 }
 
 // Top-level Modbus Bridge device command message
@@ -64,9 +67,9 @@ message ModbusBridgeDeviceCommand {
 
 // Response: CommandResult
 message ConfigureUartRequest {
-  SerialBaudRate baud_rate = 1;   // Baud rate (default: BAUD_19200)
-  SerialParity parity = 2;        // Parity (default: PARITY_NONE)
-  SerialStopBits stop_bits = 3;   // Stop bits (default: STOPBITS_1)
+  SerialBaudRate baud_rate = 1;   // Baud rate (default: SERIAL_BAUD_RATE_19200)
+  SerialParity parity = 2;        // Parity (default: SERIAL_PARITY_NONE)
+  SerialStopBits stop_bits = 3;   // Stop bits (default: SERIAL_STOP_BITS_1)
 }
 
 // ===== Modbus Read Commands =====

@@ -27,27 +27,30 @@ enum RoutingDeviceType {
 
 // RS485 UART baud rate options for modbus bridge configuration.
 enum SerialBaudRate {
-  BAUD_1200 = 0;
-  BAUD_2400 = 1;
-  BAUD_4800 = 2;
-  BAUD_9600 = 3;
-  BAUD_19200 = 4;   // Default for most modbus slaves
-  BAUD_38400 = 5;
-  BAUD_57600 = 6;
-  BAUD_115200 = 7;
+  SERIAL_BAUD_RATE_UNSPECIFIED = 0;
+  SERIAL_BAUD_RATE_1200 = 1;
+  SERIAL_BAUD_RATE_2400 = 2;
+  SERIAL_BAUD_RATE_4800 = 3;
+  SERIAL_BAUD_RATE_9600 = 4;
+  SERIAL_BAUD_RATE_19200 = 5;   // Default for most modbus slaves
+  SERIAL_BAUD_RATE_38400 = 6;
+  SERIAL_BAUD_RATE_57600 = 7;
+  SERIAL_BAUD_RATE_115200 = 8;
 }
 
 // UART parity options.
 enum SerialParity {
-  PARITY_NONE = 0;  // Default
-  PARITY_ODD = 1;
-  PARITY_EVEN = 2;
+  SERIAL_PARITY_UNSPECIFIED = 0;
+  SERIAL_PARITY_NONE = 1;  // Default
+  SERIAL_PARITY_ODD = 2;
+  SERIAL_PARITY_EVEN = 3;
 }
 
 // UART stop bit options.
 enum SerialStopBits {
-  STOPBITS_1 = 0;   // Default
-  STOPBITS_2 = 1;
+  SERIAL_STOP_BITS_UNSPECIFIED = 0;
+  SERIAL_STOP_BITS_1 = 1;   // Default
+  SERIAL_STOP_BITS_2 = 2;
 }
 
 // Firmware variant identifier. Indicates which application firmware is
@@ -64,8 +67,9 @@ enum FirmwareVariant {
 // Modbus function codes for read operations.
 // Used in ModbusReadRequest and ModbusSetPollRequest.
 enum ModbusFunction {
-  MODBUS_READ_COILS = 0;              // FC 0x01 - Read coils
-  MODBUS_READ_DISCRETE_INPUTS = 1;    // FC 0x02 - Read discrete inputs
-  MODBUS_READ_HOLDING_REGISTERS = 2;  // FC 0x03 - Read holding registers
-  MODBUS_READ_INPUT_REGISTERS = 3;    // FC 0x04 - Read input registers
+  MODBUS_FUNCTION_UNSPECIFIED = 0;
+  MODBUS_FUNCTION_READ_COILS = 1;              // FC 0x01 - Read coils
+  MODBUS_FUNCTION_READ_DISCRETE_INPUTS = 2;    // FC 0x02 - Read discrete inputs
+  MODBUS_FUNCTION_READ_HOLDING_REGISTERS = 3;  // FC 0x03 - Read holding registers
+  MODBUS_FUNCTION_READ_INPUT_REGISTERS = 4;    // FC 0x04 - Read input registers
 }
