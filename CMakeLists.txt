@@ -1,3 +1,6 @@
+# This is cursed and I have wasted hours of my life writing this.
+# Don't fk'n edit it. Please.
+
 set(PROTO_BASE_DIR "${CMAKE_CURRENT_LIST_DIR}/proto")
 set(NANOPB_OUT_PATH "${CMAKE_CURRENT_LIST_DIR}/generated/nanopb")
 set(BUF_TEMPLATE "${CMAKE_CURRENT_LIST_DIR}/buf.gen.yaml")
