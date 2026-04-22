@@ -108,23 +108,6 @@ message BLDCStateEvent {
 }
 
 // ============================================================================
-// Digital Output State Event
-// ============================================================================
-//
-// Emitted by digital output devices (DEVICE_TYPE_DIGITAL_OUT) when channel
-// states change autonomously (without a command from the PC).
-//
-// Currently no autonomous behavior is defined for digital output devices,
-// but this event type is reserved for future timeout safety features
-// (e.g., auto-zero all channels on communication loss).
-//
-message DigitalOutputStateEvent {
-  // Current duty cycle of all channels.
-  // 1 byte per channel (0-255): byte[0] = channel 0, byte[1] = channel 1, etc.
-  bytes packed_duty_cycles = 1;
-}
-
-// ============================================================================
 // Modbus Poll Result Event
 // ============================================================================
 //

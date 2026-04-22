@@ -9,10 +9,11 @@ enum DeviceType {
   DEVICE_TYPE_ROUTING = 1; // PC-CAN bridge (routing device). Was HUB in v1.
   reserved 2; // Was DEVICE_TYPE_NODE — now represented by RoutingDeviceType
   DEVICE_TYPE_SD_ADC = 3; // Sigma-delta ADC (AD4111-based, 8 current + 4 voltage)
-  DEVICE_TYPE_DIGITAL_OUT = 4; // PWM output bridge (8 channels, MCP4131)
+  reserved 4; // Was DEVICE_TYPE_DIGITAL_OUT — replaced by DEVICE_TYPE_IO
   DEVICE_TYPE_RS485_BRIDGE = 5; // Modbus RTU bridge (RS485 UART to CAN)
   DEVICE_TYPE_BLDC = 6; // Brushless DC motor controller (2 channels)
   DEVICE_TYPE_BLDC_CONTROLLER = 7; // Joystick/button controller for BLDC board
+  DEVICE_TYPE_IO = 8; // Digital IO module (4x digital input + 4x digital output)
   DEVICE_TYPE_TERRABOOT = 254; // Device is in bootloader mode (no application running)
 }
 
@@ -58,10 +59,11 @@ enum SerialStopBits {
 enum FirmwareVariant {
   FIRMWARE_VARIANT_UNSPECIFIED = 0;
   FIRMWARE_VARIANT_SDADC = 1; // Sigma-delta ADC
-  FIRMWARE_VARIANT_DIGITAL_OUTPUT = 2; // Digital/PWM output
+  reserved 2; // Was FIRMWARE_VARIANT_DIGITAL_OUTPUT — replaced by FIRMWARE_VARIANT_IO
   FIRMWARE_VARIANT_MODBUS_BRIDGE = 3; // Modbus RTU bridge
   FIRMWARE_VARIANT_BLDC_MOTOR = 4; // BLDC motor controller
   FIRMWARE_VARIANT_ADC_CONTROLLER = 5; // ADC joystick/button controller
+  FIRMWARE_VARIANT_IO = 6; // Digital IO module (4x input + 4x output)
 }
 
 // Modbus function codes for read operations.

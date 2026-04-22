@@ -1,0 +1,52 @@
+syntax = "proto3";
+
+package ringbahn.v2;
+
+// ============================================================================
+// IO Module Commands (4x Digital Input + 4x Digital Output)
+// ============================================================================
+//
+// The IO device (DEVICE_TYPE_IO) provides:
+//   - 4 digital inputs (subscribable, on/off state)
+//   - 4 digital outputs (on/off, GPIO-driven)
+//
+// Digital inputs are subscription-based: subscribe to channels 0-3 to receive
+// state-change events. Outputs are command-driven.
+//
+// CAN MAPPING:
+//   Subscription channels 0-3: Digital input events
+//     Event frame: [state:1][sequence:1]  (DLC=2)
+//
+//   SetOutputChannelRequest -> CMD_RX byte 0x20: [channel:1][state:1]
+//   SetAllOutputsRequest    -> CMD_RX byte 0x21: [bitmask:1]
+//   GetIOStateRequest       -> CMD_RX byte 0x22
+//     Response: [in_mask:1][out_mask:1]
+//
+
+// Set a single output channel on or off.
+// Response: CommandResult
+message SetOutputChannelRequest {
+  uint32 channel = 1; // Output channel index 0-3 (out of range = error)
+  uint32 state = 2; // 0 = off, nonzero = on
+}
+
+// Set all 4 output channels simultaneously via bitmask.
+// Response: CommandResult
+message SetAllOutputsRequest {
+  // 4-bit bitmask: bit0 = OUT0, bit1 = OUT1, etc.
+  // 0 = off, 1 = on.
+  uint32 output_mask = 1;
+}
+
+// Current state of all IO channels.
+// Used in BridgeResponse when the PC queries IO state.
+message IOState {
+  uint32 input_mask = 1; // 4-bit bitmask of digital input states (bit0=IN0, etc.)
+  uint32 output_mask = 2; // 4-bit bitmask of digital output states (bit0=OUT0, etc.)
+}
+
+// Digital input event. Emitted on subscription channels 0-3 when input state changes.
+message DigitalInputEvent {
+  uint32 state = 1; // 0 = low (off), 1 = high (on)
+  uint32 sequence = 2; // Sequence counter, wraps at 255
+}

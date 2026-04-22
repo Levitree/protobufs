@@ -4,7 +4,7 @@ package ringbahn.v2;
 
 import "ringbahn/v2/common.proto";
 import "ringbahn/v2/device_bldc.proto";
-import "ringbahn/v2/device_digital_output.proto";
+import "ringbahn/v2/device_io.proto";
 import "ringbahn/v2/device_modbus.proto";
 import "ringbahn/v2/device_routing.proto";
 import "ringbahn/v2/events.proto";
@@ -109,8 +109,8 @@ message BridgeCommand {
     GetVersionRequest get_version = 6; // -> GetVersionResponse
 
     // --- Subscription management ---
-    // For CAN devices (SDADC, ADC Controller, Modbus): forwarded to device's
-    // CMD_RX as CAN bytes 0x05-0x07. Invalid for BLDC/Digital Output (error_code=6).
+    // For CAN devices (SDADC, ADC Controller, IO, Modbus): forwarded to device's
+    // CMD_RX as CAN bytes 0x05-0x07. Invalid for BLDC (error_code=6).
     // For bridge (device_uuid = bridge's own UUID): subscribes to bridge-generated
     // event channels:
     //   channel 0: Device presence (DevicePresenceEvent)
@@ -126,10 +126,10 @@ message BridgeCommand {
     BLDCMovementCommand bldc_movement = 20; // -> BLDCMovementAck
     BLDCEmergencyStopCommand bldc_emergency_stop = 21; // -> CommandResult
 
-    // --- Digital output commands (DEVICE_TYPE_DIGITAL_OUT only) ---
+    // --- IO module commands (DEVICE_TYPE_IO only) ---
     // Forwarded as CAN bytes 0x20-0x21 on CMD_RX.
-    SetPWMChannelRequest set_pwm_channel = 30; // -> CommandResult
-    SetAllChannelsRequest set_all_channels = 31; // -> CommandResult
+    SetOutputChannelRequest set_output_channel = 30; // -> CommandResult
+    SetAllOutputsRequest set_all_outputs = 31; // -> CommandResult
 
     // --- Modbus bridge commands (DEVICE_TYPE_RS485_BRIDGE only) ---
     // Bridge translates into CAN bytes 0x20-0x2E on CMD_RX.
@@ -203,7 +203,7 @@ message BridgeCommand {
 message BridgeResponse {
   oneof response {
     // Generic success/error (used by most commands: ping, reset, identify,
-    // subscribe, set_hysteresis, emergency_stop, set_pwm, modbus writes, etc.)
+    // subscribe, set_hysteresis, emergency_stop, set_output, modbus writes, etc.)
     CommandResult result = 2;
 
     // System info (response to SystemInfoRequest)
@@ -216,8 +216,8 @@ message BridgeResponse {
     // BLDC movement acknowledgement (includes actual applied speeds)
     BLDCMovementAck bldc_movement_ack = 20;
 
-    // Digital output state readback
-    DigitalOutputState digital_output_state = 30;
+    // IO module state readback (input + output bitmasks)
+    IOState io_state = 30;
 
     // Modbus responses
     ModbusReadResponse modbus_read = 40;
@@ -267,7 +267,7 @@ message BridgeResponse {
 //     CAN frames whenever values change beyond hysteresis. The bridge receives
 //     these frames, wraps them in DeviceEvent, and forwards to the PC.
 //
-//   - State events (BLDC, digital output):
+//   - State events (BLDC):
 //     Pushed by the device when its state changes autonomously (e.g. BLDC
 //     timeout auto-stop). NOT sent in response to commands.
 //
@@ -325,8 +325,9 @@ message DeviceEvent {
     // BLDC motor state changed without a command (e.g. timeout auto-stop).
     BLDCStateEvent bldc_state = 30;
 
-    // Digital output state changed autonomously (reserved for future use).
-    DigitalOutputStateEvent digital_output_state = 40;
+    // IO module digital input state changed.
+    // channel 0-3 = digital input 0-3.
+    DigitalInputEvent digital_input = 40;
 
     // --- Modbus events ---
 
