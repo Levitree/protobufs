@@ -38,6 +38,10 @@ message SetAllOutputsRequest {
   uint32 output_mask = 1;
 }
 
+// Query current state of all 4 inputs + 4 outputs.
+// Response: IOState.
+message GetIOStateRequest {}
+
 // Current state of all IO channels.
 // Used in BridgeResponse when the PC queries IO state.
 message IOState {

@@ -127,9 +127,10 @@ message BridgeCommand {
     BLDCEmergencyStopCommand bldc_emergency_stop = 21; // -> CommandResult
 
     // --- IO module commands (DEVICE_TYPE_IO only) ---
-    // Forwarded as CAN bytes 0x20-0x21 on CMD_RX.
+    // Forwarded as CAN bytes 0x20-0x22 on CMD_RX.
     SetOutputChannelRequest set_output_channel = 30; // -> CommandResult
     SetAllOutputsRequest set_all_outputs = 31; // -> CommandResult
+    GetIOStateRequest get_io_state = 32; // -> IOState
 
     // --- Modbus bridge commands (DEVICE_TYPE_RS485_BRIDGE only) ---
     // Bridge translates into CAN bytes 0x20-0x2E on CMD_RX.
