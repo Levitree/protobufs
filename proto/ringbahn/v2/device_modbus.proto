@@ -125,8 +125,12 @@ message ModbusWriteRegisterRequest {
 // Poll Slot Configuration
 // ============================================================================
 
-// Configure an autonomous poll slot.
-// Response: CommandResult
+// Configure an autonomous poll slot. The bridge allocates a slot (a "ticket")
+// and returns its index — the host doesn't pick. Idempotent: if a slot
+// already polls the same (slave, function, start_address, quantity) target,
+// the bridge returns that slot's index with is_new=false instead of failing.
+//
+// Response: ModbusSetPollResponse
 //
 // The modbus device will read the specified registers from the slave and push
 // results as ModbusPollResultEvent on the slot's data channel. All active
@@ -140,13 +144,24 @@ message ModbusWriteRegisterRequest {
 // only pushes a new event when values differ from the cache. This prevents
 // flooding the CAN bus with identical readings.
 //
-// CAN mapping: CMD_RX byte 0x24: [slot:1][slave:1][func:1][addr:2 LE][qty:1]
+// CAN mapping: CMD_RX byte 0x24: [slave:1][func:1][addr:2 LE][qty:1]
 message ModbusSetPollRequest {
-  uint32 slot = 1; // Slot index 0-15 (each gets its own CAN data channel)
-  uint32 slave_address = 2; // Modbus slave to poll (1-247)
-  ModbusFunction function = 3; // Read function to use
-  uint32 start_address = 4; // Starting register address
-  uint32 quantity = 5; // Number of registers to read per poll (1-24)
+  uint32 slave_address = 1; // Modbus slave to poll (1-247)
+  ModbusFunction function = 2; // Read function to use
+  uint32 start_address = 3; // Starting register address
+  uint32 quantity = 4; // Number of registers to read per poll (1-24)
+}
+
+// Response to ModbusSetPollRequest. On success (CommandResult sibling), the
+// bridge returns the slot it has allocated (or matched, if dedup'd) and
+// whether the slot was freshly created. Out-of-slots is signalled via the
+// generic CommandResult error path with status NOT_READY.
+message ModbusSetPollResponse {
+  // Slot index 0-15. Slot's data channel is base+0x02+slot.
+  uint32 slot = 1;
+  // True when a fresh slot was allocated for this request. False when the
+  // bridge already had a slot polling the same target and returned its index.
+  bool is_new = 2;
 }
 
 // Deactivate a poll slot. Stops polling and frees the slot for reuse.

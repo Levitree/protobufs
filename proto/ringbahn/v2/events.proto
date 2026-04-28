@@ -160,6 +160,30 @@ message ModbusPollResultEvent {
 }
 
 // ============================================================================
+// Modbus Slot Health Event
+// ============================================================================
+//
+// Emitted when a poll slot transitions between HEALTHY and DEAD on the modbus
+// bridge. A slot becomes DEAD after SLOT_HEALTH_DEAD_THRESHOLD consecutive
+// error responses from its slave (default 3, ~600ms at the 200ms poll cycle);
+// it returns to HEALTHY on the first successful poll after a DEAD streak.
+//
+// Hosts should treat this as the canonical liveness signal for the device on
+// the other end of a poll slot — no per-slot stall watchdog or error-streak
+// heuristic needed on the host side.
+//
+// CAN frame format (3 bytes on data channel +0x02+slot):
+//   [slot:1][0xFB][healthy:1]   (0xFB = FRAME_HEALTH sentinel; 1 = HEALTHY, 0 = DEAD)
+//
+// Health events are emitted only on transition; a slot in steady state (all
+// healthy or all dead) emits nothing beyond its normal data/error frames.
+//
+message ModbusSlotHealthEvent {
+  uint32 slot = 1;   // Poll slot index (0-15)
+  bool healthy = 2;  // true = transitioned to HEALTHY, false = transitioned to DEAD
+}
+
+// ============================================================================
 // Device Presence Event (bridge-generated)
 // ============================================================================
 //

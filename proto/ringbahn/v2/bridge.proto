@@ -137,7 +137,7 @@ message BridgeCommand {
     ModbusReadRequest modbus_read = 40; // -> ModbusReadResponse
     ModbusWriteCoilRequest modbus_write_coil = 41; // -> CommandResult
     ModbusWriteRegisterRequest modbus_write_register = 42; // -> CommandResult
-    ModbusSetPollRequest modbus_set_poll = 44; // -> CommandResult
+    ModbusSetPollRequest modbus_set_poll = 44; // -> ModbusSetPollResponse
     ModbusClearPollRequest modbus_clear_poll = 45; // -> CommandResult
     ModbusGetPollsRequest modbus_get_polls = 46; // -> ModbusPollConfigResponse
     ModbusConfigureUartRequest modbus_configure_uart = 47; // -> CommandResult
@@ -226,6 +226,7 @@ message BridgeResponse {
 
     // Modbus responses
     ModbusReadResponse modbus_read = 40;
+    ModbusSetPollResponse modbus_set_poll = 41;
     ModbusPollConfigResponse modbus_polls = 46;
     ModbusPollStatusResponse modbus_poll_status = 52;
     ModbusGetRegisterHysteresisResponse modbus_register_hysteresis = 54;
@@ -340,6 +341,10 @@ message DeviceEvent {
     // Modbus poll slot completed a read cycle (bridge reassembled multi-frame burst).
     // device_uuid in frame identifies which modbus bridge device.
     ModbusPollResultEvent modbus_poll = 50;
+
+    // Modbus poll slot transitioned between HEALTHY and DEAD. Emitted only on
+    // transition; steady-state generates no health events.
+    ModbusSlotHealthEvent modbus_slot_health = 51;
 
     // --- Bridge-generated events ---
 
