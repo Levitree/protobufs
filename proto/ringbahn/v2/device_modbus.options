@@ -2,3 +2,5 @@ ringbahn.v2.ModbusReadResponse.data max_size:65
 ringbahn.v2.ModbusWriteMultipleRegistersRequest.values max_count:24
 ringbahn.v2.ModbusSetTimeoutCommandsRequest.commands max_count:16
 ringbahn.v2.ModbusPollConfigResponse.active_slots max_count:16
+ringbahn.v2.RegisterHysteresisList.entries max_count:24
+ringbahn.v2.ModbusGetRegisterHysteresisResponse.thresholds max_count:24

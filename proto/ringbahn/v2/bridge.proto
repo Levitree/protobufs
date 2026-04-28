@@ -150,6 +150,10 @@ message BridgeCommand {
     ModbusSetTimeoutCommandsRequest modbus_set_timeout = 48; // -> CommandResult
     ModbusClearTimeoutCommandsRequest modbus_clear_timeout = 49; // -> CommandResult
 
+    // Modbus per-register delta hysteresis (DEVICE_TYPE_RS485_BRIDGE only)
+    ModbusSetRegisterHysteresisRequest modbus_set_register_hysteresis = 53; // -> CommandResult
+    ModbusGetRegisterHysteresisRequest modbus_get_register_hysteresis = 54; // -> ModbusGetRegisterHysteresisResponse
+
     // --- Bridge-local commands (device_uuid = bridge's own UUID) ---
     // Handled by the bridge, not forwarded to CAN.
     GetAttachedDevicesRequest get_attached_devices = 60; // -> AttachedDevicesResponse
@@ -224,6 +228,7 @@ message BridgeResponse {
     ModbusReadResponse modbus_read = 40;
     ModbusPollConfigResponse modbus_polls = 46;
     ModbusPollStatusResponse modbus_poll_status = 52;
+    ModbusGetRegisterHysteresisResponse modbus_register_hysteresis = 54;
 
     // Bridge-local responses
     AttachedDevicesResponse attached_devices = 60;

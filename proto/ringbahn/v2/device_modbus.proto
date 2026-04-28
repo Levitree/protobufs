@@ -265,3 +265,63 @@ message ModbusTimeoutCommand {
 //
 // CAN mapping: CMD_RX byte 0x2D (no payload)
 message ModbusClearTimeoutCommandsRequest {}
+
+// ============================================================================
+// Per-Register Delta Hysteresis
+// ============================================================================
+//
+// Each poll slot's registers can be assigned an individual deadband threshold.
+// A register is reported only when |new - last_reported| > hysteresis. The
+// baseline is the last value actually transmitted, so slow drift below
+// threshold-per-poll still accumulates and eventually fires. Threshold = 0
+// matches the original strict-equality behaviour (any change reports).
+// Coil/discrete-input slots reject these commands — hysteresis on a single
+// bit is meaningless. Configuration is RAM-only and lost on reboot.
+
+// One per-register threshold entry, used in the sparse form of
+// ModbusSetRegisterHysteresisRequest.
+message RegisterHysteresisEntry {
+  uint32 register_offset = 1; // 0..23 (must be < slot's quantity)
+  uint32 threshold = 2; // 0..65535 (deadband size in raw register units)
+}
+
+// Sparse list of per-register thresholds; bridge fans this out into one or
+// more 0x30 SET_REGISTER_HYSTERESIS frames (two thresholds per frame when
+// offsets are consecutive).
+message RegisterHysteresisList {
+  repeated RegisterHysteresisEntry entries = 1; // max 24 entries per slot
+}
+
+// Set delta hysteresis for a poll slot's registers. Use `uniform_threshold`
+// to apply one value to all registers (maps to CAN 0x2F); use `per_register`
+// for sparse overrides (maps to one or more 0x30 frames).
+// Response: CommandResult
+//
+// CAN mapping (uniform): CMD_RX byte 0x2F: [slot:1][thresh:2 LE]
+// CAN mapping (per_register): CMD_RX byte 0x30:
+//     [slot:1][reg_offset:1][thr0:2 LE]              (DLC 5, single)
+//     [slot:1][reg_offset:1][thr0:2 LE][thr1:2 LE]   (DLC 7, paired)
+message ModbusSetRegisterHysteresisRequest {
+  uint32 slot = 1; // 0..15, must be active and read-register type
+  oneof config {
+    uint32 uniform_threshold = 2; // Applied to all registers in the slot
+    RegisterHysteresisList per_register = 3; // Sparse per-register overrides
+  }
+}
+
+// Query the slot's current per-register thresholds.
+// Response: ModbusGetRegisterHysteresisResponse
+//
+// CAN mapping: CMD_RX byte 0x31: [slot:1]
+// Response: multi-frame CMD_TX burst terminated by [0x31][0xFF]
+message ModbusGetRegisterHysteresisRequest {
+  uint32 slot = 1;
+}
+
+// Response to ModbusGetRegisterHysteresisRequest.
+// Thresholds are positionally indexed: thresholds[i] is the deadband for
+// the register at offset i (i in 0..quantity-1).
+message ModbusGetRegisterHysteresisResponse {
+  uint32 slot = 1;
+  repeated uint32 thresholds = 2; // length == slot quantity, max 24
+}
