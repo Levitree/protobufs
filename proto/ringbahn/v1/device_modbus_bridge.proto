@@ -60,6 +60,10 @@ message ModbusBridgeDeviceCommand {
     SetTimeoutCommandsRequest set_timeout_commands = 18; // Response: CommandResult
     ClearTimeoutCommandsRequest clear_timeout_commands = 19; // Response: CommandResult
     GetTimeoutConfigRequest get_timeout_config = 20; // Response: TimeoutConfigResponse
+
+    // Per-register delta hysteresis for poll slots
+    SetRegisterHysteresisRequest set_register_hysteresis = 21; // Response: CommandResult
+    GetRegisterHysteresisRequest get_register_hysteresis = 22; // Response: GetRegisterHysteresisResponse
   }
 }
 
@@ -198,4 +202,52 @@ message TimeoutConfigResponse {
   uint32 command_count = 2; // Number of stored commands
   bool timeout_active = 3; // True if currently in timeout state
   uint32 last_ping_elapsed_ms = 4; // Milliseconds since last ping
+}
+
+// ===== Per-Register Delta Hysteresis =====
+//
+// Each poll slot's registers can be assigned an individual deadband threshold.
+// A register is reported only when |new - last_reported| > hysteresis. The
+// baseline is the last value actually transmitted, so slow drift below
+// threshold-per-poll still accumulates and eventually fires. Threshold = 0
+// matches the original strict-equality behaviour (any change reports).
+// Coil/discrete-input slots reject these commands — hysteresis on a single
+// bit is meaningless. Configuration is RAM-only and lost on reboot.
+
+// One per-register threshold entry, used in the sparse form of
+// SetRegisterHysteresisRequest.
+message RegisterHysteresisEntry {
+  uint32 register_offset = 1; // 0..23 (must be < slot's quantity)
+  uint32 threshold = 2; // 0..65535 (deadband size in raw register units)
+}
+
+// Sparse list of per-register thresholds; PC-side bridge fans this out into
+// one or more 0x30 SET_REGISTER_HYSTERESIS frames (two thresholds per frame).
+message RegisterHysteresisList {
+  repeated RegisterHysteresisEntry entries = 1; // max ~24 entries per slot
+}
+
+// Set delta hysteresis for a poll slot's registers. Use `uniform_threshold`
+// to apply one value to all registers (maps to 0x2F); use `per_register` to
+// set sparse overrides (maps to one or more 0x30 frames).
+// Response: CommandResult
+message SetRegisterHysteresisRequest {
+  uint32 slot = 1; // 0..15, must be active and read-register type
+  oneof config {
+    uint32 uniform_threshold = 2; // Applied to all registers in the slot
+    RegisterHysteresisList per_register = 3; // Sparse per-register overrides
+  }
+}
+
+// Query the slot's current per-register thresholds.
+// Response: GetRegisterHysteresisResponse
+message GetRegisterHysteresisRequest {
+  uint32 slot = 1;
+}
+
+// Returned thresholds are positionally indexed: thresholds[i] is the
+// deadband for register at offset i (i in 0..quantity-1).
+message GetRegisterHysteresisResponse {
+  uint32 slot = 1;
+  repeated uint32 thresholds = 2; // length == slot quantity, max_count: 24
 }
