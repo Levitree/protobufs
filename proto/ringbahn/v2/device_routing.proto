@@ -286,3 +286,20 @@ message TerrabootIdentifyRequest {
 
 // Response to TerrabootIdentifyRequest. Empty -- success indicated by response.
 message TerrabootIdentifyResponse {}
+
+// ============================================================================
+// Throughput Test (bridge-local)
+// ============================================================================
+//
+// Round-trip echo for measuring link throughput and latency between the PC
+// and the bridge. The bridge replies with the same bytes it received.
+// Always handled locally regardless of frame device_uuid; never forwarded
+// to CAN.
+
+message ThroughputTestRequest {
+  bytes payload = 1; // Arbitrary bytes; echoed back verbatim
+}
+
+message ThroughputTestResponse {
+  bytes payload = 1; // Same bytes the bridge received
+}
