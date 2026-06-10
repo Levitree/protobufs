@@ -188,6 +188,10 @@ message BridgeCommand {
     TerrabootCompleteRequest terraboot_complete = 85; // -> TerrabootCompleteResponse
     TerrabootGetIdRequest terraboot_get_id = 86; // -> TerrabootGetIdResponse
     TerrabootIdentifyRequest terraboot_identify = 87; // -> TerrabootIdentifyResponse
+
+    // --- Throughput test (always handled locally) ---
+    // Bridge echoes the payload bytes back in ThroughputTestResponse.
+    ThroughputTestRequest throughput_test = 100; // -> ThroughputTestResponse
   }
 }
 
@@ -258,6 +262,9 @@ message BridgeResponse {
     TerrabootGetIdResponse terraboot_get_id = 86;
     TerrabootIdentifyResponse terraboot_identify = 87;
     AcknowledgeResponse acknowledge = 90;
+
+    // Throughput test echo
+    ThroughputTestResponse throughput_test = 100;
   }
 }
 

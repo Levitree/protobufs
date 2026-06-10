@@ -9,6 +9,9 @@ set(BUF_TEMPLATE "${CMAKE_CURRENT_LIST_DIR}/buf.gen.yaml")
 # Configure-time codegen (runs buf generate if inputs changed)
 # ---------------------------------------------------------------------------
 
+# Re-find each configure: a cached path may be stale (e.g. CI restores build/
+# from a different runner where the buf binary lives at a different path).
+unset(BUF_EXECUTABLE CACHE)
 find_program(BUF_EXECUTABLE buf)
 if(BUF_EXECUTABLE AND NOT CMAKE_BUILD_EARLY_EXPANSION)
     file(GLOB_RECURSE PROTO_SRCS CONFIGURE_DEPENDS "${PROTO_BASE_DIR}/*.proto")
@@ -61,15 +64,36 @@ if(BUF_EXECUTABLE AND NOT CMAKE_BUILD_EARLY_EXPANSION)
         )
 
         if(NOT BUF_GEN_RESULT EQUAL 0)
-            message(WARNING
-                "buf generate failed with exit code ${BUF_GEN_RESULT}.\n"
-                "stderr:\n${BUF_GEN_STDERR}\n"
-            )
+            file(GLOB _existing_pb "${NANOPB_OUT_PATH}/*.pb.c")
+            if(_existing_pb)
+                message(WARNING
+                    "buf generate failed with exit code ${BUF_GEN_RESULT}.\n"
+                    "stderr:\n${BUF_GEN_STDERR}\n"
+                    "Continuing with previously generated nanopb sources.\n"
+                )
+            else()
+                message(FATAL_ERROR
+                    "buf generate failed with exit code ${BUF_GEN_RESULT} and no "
+                    "previously generated nanopb sources exist at ${NANOPB_OUT_PATH}.\n"
+                    "buf path: ${BUF_EXECUTABLE}\n"
+                    "stdout:\n${BUF_GEN_STDOUT}\n"
+                    "stderr:\n${BUF_GEN_STDERR}\n"
+                    "Ensure 'buf' and 'protoc-gen-nanopb' are installed in PATH."
+                )
+            endif()
         else()
             file(WRITE "${BUF_CODEGEN_STAMP}" "${BUF_CODEGEN_HASH}\n")
         endif()
     else()
         message(STATUS "Nanopb sources up-to-date (buf codegen skipped)")
+    endif()
+elseif(NOT CMAKE_BUILD_EARLY_EXPANSION)
+    if(NOT EXISTS "${NANOPB_OUT_PATH}" OR NOT IS_DIRECTORY "${NANOPB_OUT_PATH}")
+        message(FATAL_ERROR
+            "'buf' was not found in PATH and no pre-generated nanopb sources exist "
+            "at ${NANOPB_OUT_PATH}. Install buf (https://buf.build) and the "
+            "'protoc-gen-nanopb' plugin, then re-configure."
+        )
     endif()
 endif()
 
