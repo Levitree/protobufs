@@ -108,6 +108,54 @@ message BLDCStateEvent {
 }
 
 // ============================================================================
+// DC Motor State Event
+// ============================================================================
+//
+// Emitted by DC motor devices (DEVICE_TYPE_DC) on subscription channels 8-11
+// (one channel per motor) whenever any host-visible field changes: mode,
+// commanded speed, applied speed, or any flag bit.
+//
+// Hosts use this as the canonical signal for endstop transitions — when the
+// firmware zeros commanded_speed on an endstop trip, this event fires with
+// the corresponding *_endstop_active flag set and commanded_speed = 0.
+//
+// CAN frame format (5 bytes on data channel +0x0A..+0x0D):
+//   [mode:1][cmd_speed:1 i8][applied_speed:1 i8][flags:1][sequence:1]
+//
+// Digital inputs on this device (channels 0-7) reuse DigitalInputEvent —
+// see device_io.proto for the input frame format. Inputs assigned as
+// endstops still publish raw state through those channels.
+//
+message DCMotorStateEvent {
+  // Current per-motor mode (FREE or ENDSTOP).
+  DCMotorMode mode = 1;
+
+  // Last commanded speed accepted via SetDCMotorSpeedRequest, signed [-100, +100].
+  // Zeroed by the firmware on an endstop trip — host must re-send to resume.
+  sint32 commanded_speed = 2;
+
+  // Speed currently driven to the bridge, signed [-100, +100]. Equals
+  // commanded_speed in steady state; differs (always 0) during the brief
+  // direction-change deadtime that follows a sign reversal.
+  sint32 applied_speed = 3;
+
+  // Negative-direction endstop currently reads as active (per its configured
+  // active level). Always false in FREE mode.
+  bool neg_endstop_active = 4;
+
+  // Positive-direction endstop currently reads as active. Always false in
+  // FREE mode.
+  bool pos_endstop_active = 5;
+
+  // true while the bridge is sitting at EN=0 between a direction reversal
+  // (~2 ms window after sign(speed) flips).
+  bool direction_changing = 6;
+
+  // true when applied_speed != 0 (motor is actively driven).
+  bool driving = 7;
+}
+
+// ============================================================================
 // Modbus Poll Result Event
 // ============================================================================
 //

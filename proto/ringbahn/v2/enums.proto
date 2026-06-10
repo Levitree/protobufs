@@ -14,6 +14,7 @@ enum DeviceType {
   DEVICE_TYPE_BLDC = 6; // Brushless DC motor controller (2 channels)
   DEVICE_TYPE_BLDC_CONTROLLER = 7; // Joystick/button controller for BLDC board
   DEVICE_TYPE_IO = 8; // Digital IO module (4x digital input + 4x digital output)
+  DEVICE_TYPE_DC = 9; // Brushed DC motor module (4x DRV8876 H-bridge + 8x digital input)
   DEVICE_TYPE_TERRABOOT = 254; // Device is in bootloader mode (no application running)
 }
 
@@ -64,6 +65,19 @@ enum FirmwareVariant {
   FIRMWARE_VARIANT_BLDC_MOTOR = 4; // BLDC motor controller
   FIRMWARE_VARIANT_ADC_CONTROLLER = 5; // ADC joystick/button controller
   FIRMWARE_VARIANT_IO = 6; // Digital IO module (4x input + 4x output)
+  FIRMWARE_VARIANT_DC = 7; // Brushed DC motor module (4x H-bridge + 8x input)
+}
+
+// Per-motor mode on the DC variant (DEVICE_TYPE_DC).
+//   FREE    — speed/direction taken directly from SetDCMotorSpeedRequest.
+//   ENDSTOP — same, but two assigned inputs gate motion per direction. When
+//             a commanded motion would push into an active endstop, the
+//             firmware zeros the commanded speed. Host must re-send to retry
+//             (no auto-resume on limit release).
+enum DCMotorMode {
+  DC_MOTOR_MODE_UNSPECIFIED = 0;
+  DC_MOTOR_MODE_FREE = 1;
+  DC_MOTOR_MODE_ENDSTOP = 2;
 }
 
 // Modbus function codes for read operations.

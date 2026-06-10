@@ -1,0 +1,114 @@
+syntax = "proto3";
+
+package ringbahn.v2;
+
+import "ringbahn/v2/enums.proto";
+
+// ============================================================================
+// DC Motor Module Commands (4x DRV8876 H-Bridge + 8x Digital Input)
+// ============================================================================
+//
+// The DC device (DEVICE_TYPE_DC) provides:
+//   - 4 brushed DC motor channels (PH/EN driven), independent per-motor mode:
+//       * FREE    — speed/direction from SetDCMotorSpeedRequest only.
+//       * ENDSTOP — two configurable inputs gate motion per direction.
+//                   When a commanded motion would push into an active endstop,
+//                   the firmware zeros the commanded speed. Host must re-send
+//                   SET_SPEED to retry (no auto-resume on limit release).
+//   - 8 digital inputs (subscribable). Inputs assigned as endstops still
+//     publish raw state on their input channel.
+//
+// Configuration is NOT persisted across reboot — host re-applies on every session.
+//
+// CAN MAPPING:
+//   Subscription channels 0-7  (+0x02..+0x09): Digital input events
+//     Reuses DigitalInputEvent: [state:1][sequence:1]  (DLC=2)
+//
+//   Subscription channels 8-11 (+0x0A..+0x0D): Motor state events
+//     DCMotorStateEvent: [mode:1][cmd_speed:1 i8][applied_speed:1 i8][flags:1][sequence:1]
+//     (DLC=5)
+//
+//   SetDCMotorSpeedRequest -> CMD_RX byte 0x20: [motor_id:1][speed:1 i8]
+//   SetDCMotorModeRequest  -> CMD_RX byte 0x21: [motor_id:1][mode:1][endstop_cfg:1]
+//   StopAllDCMotorsRequest -> CMD_RX byte 0x22
+//   GetDCStateRequest      -> CMD_RX byte 0x23
+//     Response: [in_mask:1][m0_flags:1][m1_flags:1][m2_flags:1][m3_flags:1]
+//
+
+// Endstop assignment for one motor channel. Only meaningful when the motor's
+// mode is DC_MOTOR_MODE_ENDSTOP — ignored in FREE mode.
+//
+// Wire format (packed into the CAN endstop_cfg byte):
+//   bits 0-2: neg_input_index
+//   bit  3:   neg_active_high
+//   bits 4-6: pos_input_index
+//   bit  7:   pos_active_high
+//
+// The two endstops are independent: each can reference any of the 8 inputs
+// (including the same input as another motor's endstop — mapping is arbitrary).
+// The "neg"/"pos" naming refers to the sign of the commanded speed that the
+// endstop blocks (neg endstop blocks speed<0, pos endstop blocks speed>0).
+message DCEndstopConfig {
+  uint32 neg_input = 1; // Input index 0-7 used as the negative-direction limit
+  bool neg_active_high = 2; // true = active when input reads high, false = active low
+  uint32 pos_input = 3; // Input index 0-7 used as the positive-direction limit
+  bool pos_active_high = 4;
+}
+
+// Command a single motor's speed/direction.
+// Response: CommandResult
+//
+// Speed is a signed percentage, clamped by the firmware to [-100, +100]:
+//   -100 = full reverse
+//      0 = coast (EN low)
+//   +100 = full forward
+//
+// Sign controls the PH leg; magnitude scales linearly to the PWM duty cycle
+// (TIM3 at 20 kHz, 3600-step resolution).
+//
+// In ENDSTOP mode, if sign(speed) matches an active endstop, the firmware
+// accepts the command and immediately zeros it — motor stays stopped, host
+// must re-send when ready.
+//
+// Direction reversal (sign flips between two nonzero speeds): the bridge
+// holds EN at 0 for ~2 ms before flipping PH, then ramps to the new target.
+message SetDCMotorSpeedRequest {
+  uint32 motor_id = 1; // Motor channel 0-3 (out of range = error)
+  sint32 speed = 2; // Signed percentage -100..+100 (clamped)
+}
+
+// Reconfigure one motor's mode and (if ENDSTOP) endstop input mapping.
+// Always resets the motor's commanded speed to 0 — host must re-issue
+// SET_SPEED after a mode change.
+// Response: CommandResult
+message SetDCMotorModeRequest {
+  uint32 motor_id = 1; // Motor channel 0-3
+  DCMotorMode mode = 2; // FREE or ENDSTOP
+  DCEndstopConfig endstop = 3; // Required if mode = ENDSTOP, ignored otherwise
+}
+
+// Stop all four motors immediately. Equivalent to four SetDCMotorSpeedRequest
+// calls with speed=0 but issued in a single CAN frame. Modes and endstop
+// mappings are untouched.
+// Response: CommandResult
+message StopAllDCMotorsRequest {}
+
+// Snapshot of the DC variant's complete IO + motor state.
+// Response: DCState
+message GetDCStateRequest {}
+
+// Current snapshot of the DC variant.
+// Used in BridgeResponse as the reply to GetDCStateRequest.
+message DCState {
+  // 8-bit bitmask of digital input states.
+  //   bit 0 = IN1, bit 1 = IN2, ... bit 7 = IN8
+  uint32 input_mask = 1;
+
+  // Per-motor flag bytes, length always 4 (one entry per motor channel).
+  // Each byte is the same bitmask used in DCMotorStateEvent.flags:
+  //   bit 0: negative-direction endstop active
+  //   bit 1: positive-direction endstop active
+  //   bit 2: direction-change deadtime in progress
+  //   bit 3: actively driving (applied_speed != 0)
+  repeated uint32 motor_flags = 2;
+}

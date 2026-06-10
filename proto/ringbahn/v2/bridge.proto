@@ -4,6 +4,7 @@ package ringbahn.v2;
 
 import "ringbahn/v2/common.proto";
 import "ringbahn/v2/device_bldc.proto";
+import "ringbahn/v2/device_dc.proto";
 import "ringbahn/v2/device_io.proto";
 import "ringbahn/v2/device_modbus.proto";
 import "ringbahn/v2/device_routing.proto";
@@ -132,6 +133,13 @@ message BridgeCommand {
     SetAllOutputsRequest set_all_outputs = 31; // -> CommandResult
     GetIOStateRequest get_io_state = 32; // -> IOState
 
+    // --- DC motor commands (DEVICE_TYPE_DC only) ---
+    // Forwarded as CAN bytes 0x20-0x23 on CMD_RX.
+    SetDCMotorSpeedRequest dc_set_motor_speed = 90; // -> CommandResult
+    SetDCMotorModeRequest dc_set_motor_mode = 91; // -> CommandResult
+    StopAllDCMotorsRequest dc_stop_all_motors = 92; // -> CommandResult
+    GetDCStateRequest dc_get_state = 93; // -> DCState
+
     // --- Modbus bridge commands (DEVICE_TYPE_RS485_BRIDGE only) ---
     // Bridge translates into CAN bytes 0x20-0x2E on CMD_RX.
     ModbusReadRequest modbus_read = 40; // -> ModbusReadResponse
@@ -223,6 +231,9 @@ message BridgeResponse {
 
     // IO module state readback (input + output bitmasks)
     IOState io_state = 30;
+
+    // DC module state readback (input bitmask + per-motor flag bytes)
+    DCState dc_state = 93;
 
     // Modbus responses
     ModbusReadResponse modbus_read = 40;
@@ -332,9 +343,16 @@ message DeviceEvent {
     // BLDC motor state changed without a command (e.g. timeout auto-stop).
     BLDCStateEvent bldc_state = 30;
 
-    // IO module digital input state changed.
-    // channel 0-3 = digital input 0-3.
+    // Digital input state changed. Shared between IO and DC variants:
+    //   IO module (DEVICE_TYPE_IO): channels 0-3 = digital input 0-3.
+    //   DC module (DEVICE_TYPE_DC): channels 0-7 = digital input 1-8 (inputs
+    //                               assigned as endstops still publish here).
     DigitalInputEvent digital_input = 40;
+
+    // DC motor channel state changed (mode, commanded/applied speed, flags).
+    // channel 8-11 on DEVICE_TYPE_DC = motor 0-3. Fires on endstop transitions
+    // (the firmware also zeros commanded_speed on a trip, which shows up here).
+    DCMotorStateEvent dc_motor_state = 80;
 
     // --- Modbus events ---
 
