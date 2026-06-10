@@ -1,0 +1,3 @@
+# DCState.motor_flags is always exactly 4 entries (one per motor channel).
+# Pin to max_count:4 so nanopb generates a fixed array + pb_size_t, not a callback.
+ringbahn.v2.DCState.motor_flags max_count:4
