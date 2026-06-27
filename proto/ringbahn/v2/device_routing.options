@@ -10,3 +10,14 @@ ringbahn.v2.TerrabootConnectResponse.app_version max_size:16
 ringbahn.v2.TerrabootGetIdResponse.can_uuid max_size:12
 ringbahn.v2.ThroughputTestRequest.payload max_size:240
 ringbahn.v2.ThroughputTestResponse.payload max_size:240
+
+# WiFi management. SSID is 32 bytes per 802.11, PSK is 8-63 ASCII for WPA2
+# (+1 for nul, rounded to 64). IP string is 16 bytes (max IPv4 dotted-quad
+# + nul). Network list capped at 16 entries to keep the encoded
+# WifiNetworksResponse under the Ringbahn 246-byte payload ceiling.
+ringbahn.v2.WifiNetwork.ssid max_size:33
+ringbahn.v2.WifiNetworksResponse.networks max_count:8
+ringbahn.v2.WifiConnectNetworkRequest.ssid max_size:33
+ringbahn.v2.WifiConnectNetworkRequest.psk max_size:64
+ringbahn.v2.WifiStatus.ssid max_size:33
+ringbahn.v2.WifiStatus.ip max_size:16

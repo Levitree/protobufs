@@ -192,6 +192,13 @@ message BridgeCommand {
     // --- Throughput test (always handled locally) ---
     // Bridge echoes the payload bytes back in ThroughputTestResponse.
     ThroughputTestRequest throughput_test = 100; // -> ThroughputTestResponse
+
+    // --- WiFi management (DEVICE_TYPE_ROUTING with CONFIG_HAS_WIFI only) ---
+    // Bridge-local. device_uuid = bridge's own UUID.
+    WifiListNetworksRequest wifi_list = 110; // -> WifiNetworksResponse
+    WifiConnectNetworkRequest wifi_connect = 111; // -> CommandResult
+    WifiDisconnectNetworkRequest wifi_disconnect = 112; // -> CommandResult
+    WifiGetNetworkStatusRequest wifi_status = 113; // -> WifiStatus
   }
 }
 
@@ -265,6 +272,11 @@ message BridgeResponse {
 
     // Throughput test echo
     ThroughputTestResponse throughput_test = 100;
+
+    // WiFi management responses (bridge-local). Connect/disconnect reuse
+    // the generic CommandResult above.
+    WifiNetworksResponse wifi_networks = 110;
+    WifiStatus wifi_status = 113;
   }
 }
 

@@ -288,6 +288,90 @@ message TerrabootIdentifyRequest {
 message TerrabootIdentifyResponse {}
 
 // ============================================================================
+// WiFi Management (bridge-local, routing devices only)
+// ============================================================================
+//
+// Available on hub/node routing devices that have CONFIG_HAS_WIFI enabled.
+// All commands are handled locally by the bridge; never forwarded to CAN.
+//
+// FLOW:
+//   1. wifi_list   -- Scan for available networks (active scan, ~1.5s)
+//   2. wifi_connect -- Provide SSID + optional PSK; bridge stores in NVS
+//                      and attempts to associate
+//   3. wifi_status -- Query current association state (IP, SSID, uptime)
+//   4. wifi_disconnect -- Disassociate and clear stored credentials
+//
+
+// Encryption / authentication mode reported by a scanned network.
+// Values are aligned with esp-idf's wifi_auth_mode_t for direct mapping.
+enum WifiEncryptionType {
+  WIFI_ENCRYPTION_TYPE_UNSPECIFIED = 0;
+  WIFI_ENCRYPTION_TYPE_OPEN = 1;
+  WIFI_ENCRYPTION_TYPE_WEP = 2;
+  WIFI_ENCRYPTION_TYPE_WPA_PSK = 3;
+  WIFI_ENCRYPTION_TYPE_WPA2_PSK = 4;
+  WIFI_ENCRYPTION_TYPE_WPA_WPA2_PSK = 5;
+  WIFI_ENCRYPTION_TYPE_WPA2_ENTERPRISE = 6;
+  WIFI_ENCRYPTION_TYPE_WPA3_PSK = 7;
+  WIFI_ENCRYPTION_TYPE_WPA2_WPA3_PSK = 8;
+  WIFI_ENCRYPTION_TYPE_WAPI_PSK = 9;
+}
+
+// A single WiFi network discovered by an active scan.
+message WifiNetwork {
+  string ssid = 1;                        // SSID (UTF-8, up to 32 bytes)
+  int32 rssi = 2;                         // Signal strength in dBm (typically -30 to -95)
+  WifiEncryptionType encryption_type = 3; // Authentication mode
+}
+
+// Trigger an active scan and return all networks visible to the radio.
+// Response: WifiNetworksResponse
+//
+// Blocks the calling task for ~1500ms (typical scan duration) while the
+// radio sweeps all channels. The bridge serializes scans -- a second
+// request while a scan is in flight returns error_code=3 (busy).
+message WifiListNetworksRequest {}
+
+// Response to WifiListNetworksRequest.
+message WifiNetworksResponse {
+  // Networks ordered by descending RSSI. Limited to 16 entries to keep the
+  // encoded message under the Ringbahn payload ceiling. Duplicate SSIDs
+  // (e.g. multiple APs in a mesh) are coalesced to the strongest entry.
+  repeated WifiNetwork networks = 1;
+}
+
+// Associate with a network. Credentials are persisted to NVS so the bridge
+// auto-connects on subsequent boots. Replaces any previously stored creds.
+// Response: CommandResult
+//
+// success=true means the configuration was accepted and an association
+// attempt was started; it does NOT mean the device has an IP yet. Poll
+// wifi_status (or subscribe to the WiFi state event channel, future work)
+// to observe the connect outcome.
+message WifiConnectNetworkRequest {
+  string ssid = 1;     // Required, 1-32 UTF-8 bytes
+  string psk = 2;      // Optional; empty / omitted for OPEN networks
+}
+
+// Disassociate and clear stored credentials. The bridge stops attempting
+// auto-connect until new credentials are provided.
+// Response: CommandResult
+message WifiDisconnectNetworkRequest {}
+
+// Query the current WiFi association state.
+// Response: WifiStatus
+message WifiGetNetworkStatusRequest {}
+
+// Current WiFi association state.
+message WifiStatus {
+  bool connected = 1;            // True if associated AND has an IPv4 lease
+  string ssid = 2;               // SSID of the current/last association (may be empty)
+  string ip = 3;                 // Dotted-quad IPv4 address (empty if not connected)
+  uint32 uptime_seconds = 4;     // Seconds since the most recent successful association
+                                 // (0 when not connected; resets on each (re)connect)
+}
+
+// ============================================================================
 // Throughput Test (bridge-local)
 // ============================================================================
 //
