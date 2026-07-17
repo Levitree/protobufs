@@ -121,6 +121,16 @@ message ModbusWriteRegisterRequest {
   uint32 value = 3; // Register value (16-bit, stored in uint32 for proto3 compatibility)
 }
 
+// Write multiple consecutive holding registers (Modbus function code 0x10).
+// Response: CommandResult
+//
+// CAN mapping: CMD_RX byte 0x28: [slave:1][start:2 LE][qty:2 LE][values:2*qty LE]
+message ModbusWriteMultipleRegistersRequest {
+  uint32 slave_address = 1; // Modbus slave address (1-247)
+  uint32 start_address = 2; // First register address
+  repeated uint32 values = 3; // Register values (each 16-bit, stored in uint32 for proto3)
+}
+
 // ============================================================================
 // Poll Slot Configuration
 // ============================================================================

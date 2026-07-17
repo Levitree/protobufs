@@ -145,6 +145,7 @@ message BridgeCommand {
     ModbusReadRequest modbus_read = 40; // -> ModbusReadResponse
     ModbusWriteCoilRequest modbus_write_coil = 41; // -> CommandResult
     ModbusWriteRegisterRequest modbus_write_register = 42; // -> CommandResult
+    ModbusWriteMultipleRegistersRequest modbus_write_multiple_registers = 43; // -> CommandResult
     ModbusSetPollRequest modbus_set_poll = 44; // -> ModbusSetPollResponse
     ModbusClearPollRequest modbus_clear_poll = 45; // -> CommandResult
     ModbusGetPollsRequest modbus_get_polls = 46; // -> ModbusPollConfigResponse
