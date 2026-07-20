@@ -200,6 +200,11 @@ message BridgeCommand {
     WifiConnectNetworkRequest wifi_connect = 111; // -> CommandResult
     WifiDisconnectNetworkRequest wifi_disconnect = 112; // -> CommandResult
     WifiGetNetworkStatusRequest wifi_status = 113; // -> WifiStatus
+
+    // --- Device name (bridge-local, device_uuid = bridge's own UUID) ---
+    // Persisted to NVS; used as the BLE advertisement name.
+    SetBridgeNameRequest set_bridge_name = 114; // -> CommandResult
+    GetBridgeNameRequest get_bridge_name = 115; // -> BridgeNameResponse
   }
 }
 
@@ -278,6 +283,10 @@ message BridgeResponse {
     // the generic CommandResult above.
     WifiNetworksResponse wifi_networks = 110;
     WifiStatus wifi_status = 113;
+
+    // Device name readback (bridge-local). set_bridge_name reuses the
+    // generic CommandResult above.
+    BridgeNameResponse bridge_name = 115;
   }
 }
 

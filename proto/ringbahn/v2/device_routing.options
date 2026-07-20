@@ -21,3 +21,8 @@ ringbahn.v2.WifiConnectNetworkRequest.ssid max_size:33
 ringbahn.v2.WifiConnectNetworkRequest.psk max_size:64
 ringbahn.v2.WifiStatus.ssid max_size:33
 ringbahn.v2.WifiStatus.ip max_size:16
+
+# Bridge device name. 31 UTF-8 bytes + nul matches the firmware's
+# device_name_buf[32] and NimBLE's default GAP device-name limit (31).
+ringbahn.v2.SetBridgeNameRequest.name max_size:32
+ringbahn.v2.BridgeNameResponse.name max_size:32

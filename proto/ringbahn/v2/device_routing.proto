@@ -372,6 +372,44 @@ message WifiStatus {
 }
 
 // ============================================================================
+// Device Name (bridge-local, routing devices only)
+// ============================================================================
+//
+// Human-readable name for the bridge itself, assigned by the host (the
+// backend database is the source of truth). The bridge persists it to NVS
+// and uses it as its BLE GAP / advertisement name in place of the default
+// "terranova-XXXX" (derived from the BT MAC). The stored name survives
+// reboots and firmware updates; it does NOT affect the mDNS hostname.
+//
+// The host re-pushes the name on every connect (idempotent), so a bridge
+// that lost NVS (factory erase) converges back to the configured name.
+
+// Set or clear the bridge's device name. Persisted to NVS and applied to
+// BLE advertising immediately (no reboot required).
+// Response: CommandResult
+message SetBridgeNameRequest {
+  // 0-31 UTF-8 bytes. Empty clears the stored name, reverting the bridge
+  // to its default "terranova-XXXX" advertisement name.
+  //
+  // The 31-byte ADV packet budget (flags + manufacturer data + name) only
+  // fits ~16 name bytes; longer names are truncated in the ADV payload
+  // (name_is_complete=0) but remain complete in the GAP device-name
+  // characteristic, which clients read after connecting.
+  string name = 1;
+}
+
+// Query the name currently stored in NVS.
+// Response: BridgeNameResponse
+message GetBridgeNameRequest {}
+
+// Response to GetBridgeNameRequest.
+message BridgeNameResponse {
+  // Stored name, or empty if none is set (bridge advertises its default
+  // "terranova-XXXX" name).
+  string name = 1;
+}
+
+// ============================================================================
 // Throughput Test (bridge-local)
 // ============================================================================
 //
