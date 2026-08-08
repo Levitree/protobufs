@@ -257,6 +257,25 @@ message DevicePresenceEvent {
   DeviceType device_type = 1; // Type of the device (SDADC, BLDC, etc.)
   DeviceUUID device_uuid = 2; // 6-byte UUID of the device that appeared/disappeared
   bool online = 3; // true = device appeared, false = device lost (heartbeat timeout)
+
+  // Seconds since the device booted, as reported in its heartbeat payload,
+  // saturating at 65535 (~18.2h). 0 = unknown (device firmware predates the
+  // extended heartbeat, or no beat has been seen yet).
+  //
+  // Exists so the host can distinguish "this device rebooted" from "this device
+  // has been up all along". Those are identical on the wire otherwise, and the
+  // difference is load-bearing: a board reboots in ~2s, far inside the host's
+  // presence-sweep window, so it returns with empty RAM (no poll slots, no
+  // channel subscriptions, no UART/ADC config) while the host still believes it
+  // never left. Every host-side re-arm is edge-triggered on offline->online, so
+  // without this none of them fire and the device stays mute until the host
+  // process restarts.
+  //
+  // HOST RULE: a value lower than the last one seen for this device means it
+  // restarted -> tear down and re-arm. Only inequality is tested, so this needs
+  // no entropy, no persistence across reset, and no ack handshake. Treat 0 as
+  // "no information" and skip the test rather than reading it as a restart.
+  uint32 uptime_s = 4;
 }
 
 // ============================================================================
