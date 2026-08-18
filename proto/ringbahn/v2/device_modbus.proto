@@ -47,6 +47,52 @@ message ModbusConfigureUartRequest {
 }
 
 // ============================================================================
+// Per-Slave Serial Profiles
+// ============================================================================
+//
+// Slaves on one RS-485 bus may run at different line settings. The bridge
+// stores a profile per slave address and applies it immediately before each
+// transaction with that slave -- polls, direct reads, and direct writes alike.
+// A slave with no profile uses the bridge default set by
+// ModbusConfigureUartRequest above.
+//
+// The profile is keyed on the slave address rather than carried on each poll
+// slot or request because several poll slots may target one physical device;
+// per-slot profiles could contradict each other for the same slave.
+//
+// Profiles are RAM-only and lost on reboot, exactly like the bridge default.
+// The host re-pushes them whenever the bridge comes back.
+
+// One slave's RS-485 line settings. Data bits are always 8 (Modbus RTU
+// mandates it; 7 data bits is Modbus ASCII, which this bridge does not speak).
+message SerialProfile {
+  SerialBaudRate baud_rate = 1;
+  SerialParity parity = 2;
+  SerialStopBits stop_bits = 3;
+}
+
+// Bind a serial profile to one slave address, replacing any existing profile
+// for it. The bridge switches to this profile before transacting with the
+// slave and does not restore anything afterwards -- the next transaction
+// applies whatever its own slave needs.
+// Response: CommandResult
+//
+// CAN mapping: CMD_RX byte 0x32: [slave:1][baud:1][parity:1][stop_bits:1]
+message ModbusSetSlaveSerialRequest {
+  uint32 slave_address = 1; // Modbus slave address (1-247)
+  SerialProfile profile = 2;
+}
+
+// Drop a slave's profile so it falls back to the bridge default.
+// Response: CommandResult
+//
+// CAN mapping: CMD_RX byte 0x33: [slave:1]
+message ModbusClearSlaveSerialRequest {
+  // Slave address (1-247) to clear, or 0 to clear every stored profile.
+  uint32 slave_address = 1;
+}
+
+// ============================================================================
 // Direct Read
 // ============================================================================
 

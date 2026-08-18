@@ -163,6 +163,10 @@ message BridgeCommand {
     ModbusSetRegisterHysteresisRequest modbus_set_register_hysteresis = 53; // -> CommandResult
     ModbusGetRegisterHysteresisRequest modbus_get_register_hysteresis = 54; // -> ModbusGetRegisterHysteresisResponse
 
+    // Modbus per-slave serial profiles (DEVICE_TYPE_RS485_BRIDGE only)
+    ModbusSetSlaveSerialRequest modbus_set_slave_serial = 55; // -> CommandResult
+    ModbusClearSlaveSerialRequest modbus_clear_slave_serial = 56; // -> CommandResult
+
     // --- Bridge-local commands (device_uuid = bridge's own UUID) ---
     // Handled by the bridge, not forwarded to CAN.
     GetAttachedDevicesRequest get_attached_devices = 60; // -> AttachedDevicesResponse
