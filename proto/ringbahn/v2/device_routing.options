@@ -26,3 +26,12 @@ ringbahn.v2.WifiStatus.ip max_size:16
 # device_name_buf[32] and NimBLE's default GAP device-name limit (31).
 ringbahn.v2.SetBridgeNameRequest.name max_size:32
 ringbahn.v2.BridgeNameResponse.name max_size:32
+
+# Bluetooth devices. Name capped at 24 UTF-8 bytes + nul ("Xbox Wireless
+# Controller" is 24). Known list is 3; scan pages are 4 so a page stays
+# under the 245-byte Ringbahn payload ceiling.
+ringbahn.v2.BluetoothAddress.value max_size:6 fixed_length:true
+ringbahn.v2.KnownBluetoothDevice.name max_size:25
+ringbahn.v2.DiscoveredBluetoothDevice.name max_size:25
+ringbahn.v2.BluetoothStatus.known max_count:3
+ringbahn.v2.BluetoothScanResults.results max_count:4

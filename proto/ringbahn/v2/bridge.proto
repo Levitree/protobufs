@@ -116,7 +116,8 @@ message BridgeCommand {
     // event channels:
     //   channel 0: Device presence (DevicePresenceEvent)
     //   channel 1: GPS state (GPSStateEvent)
-    //   channels 2-29: Reserved
+    //   channel 2: Bluetooth devices (BluetoothStatusEvent)
+    //   channels 3-29: Reserved
     SubscribeRequest subscribe = 10; // -> CommandResult
     UnsubscribeRequest unsubscribe = 11; // -> CommandResult
     SetHysteresisRequest set_hysteresis = 12; // -> CommandResult
@@ -209,6 +210,16 @@ message BridgeCommand {
     // Persisted to NVS; used as the BLE advertisement name.
     SetBridgeNameRequest set_bridge_name = 114; // -> CommandResult
     GetBridgeNameRequest get_bridge_name = 115; // -> BridgeNameResponse
+
+    // --- Bluetooth devices (bridge-local, device_uuid = bridge's own UUID) ---
+    // Generic BLE central: scan / pair / forget / status. The bridge decides
+    // what a paired device is used for (see device_routing.proto).
+    GetBluetoothStatusRequest bluetooth_status = 116; // -> BluetoothStatus
+    BluetoothStartScanRequest bluetooth_scan_start = 117; // -> CommandResult
+    BluetoothStopScanRequest bluetooth_scan_stop = 118; // -> CommandResult
+    GetBluetoothScanResultsRequest bluetooth_scan_results = 119; // -> BluetoothScanResults
+    BluetoothPairRequest bluetooth_pair = 120; // -> CommandResult
+    BluetoothForgetRequest bluetooth_forget = 121; // -> CommandResult
   }
 }
 
@@ -291,6 +302,11 @@ message BridgeResponse {
     // Device name readback (bridge-local). set_bridge_name reuses the
     // generic CommandResult above.
     BridgeNameResponse bridge_name = 115;
+
+    // Bluetooth devices (bridge-local). scan_start/scan_stop/pair/forget reuse
+    // the generic CommandResult above.
+    BluetoothStatus bluetooth_status = 116;
+    BluetoothScanResults bluetooth_scan_results = 119;
   }
 }
 
@@ -408,5 +424,10 @@ message DeviceEvent {
     // device_uuid in frame = bridge UUID.
     // Only sent to transports subscribed to bridge channel 1.
     GPSStateEvent gps_state = 70;
+
+    // Bluetooth device state changed (known list, connectivity, scan, pairing).
+    // device_uuid in frame = bridge UUID.
+    // Only sent to transports subscribed to bridge channel 2.
+    BluetoothStatusEvent bluetooth_status = 71;
   }
 }

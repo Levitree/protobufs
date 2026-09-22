@@ -410,6 +410,182 @@ message BridgeNameResponse {
 }
 
 // ============================================================================
+// Bluetooth Devices (bridge-local, routing devices only)
+// ============================================================================
+//
+// The bridge acts as a BLE central and manages a small list of known (bonded)
+// Bluetooth devices. The host sees *generic* devices: address, name, class
+// (derived from the GAP Appearance, for icons), connectivity, and the usage
+// the bridge has assigned. What the bridge does with a paired device is
+// decided by the bridge from the device class (a class -> driver table); the
+// first driver turns a gamepad/joystick into rover control (BLDC broadcast
+// control frames on the CAN bus, exactly like the physical BLDC controller).
+//
+// FLOW:
+//   1. bluetooth_scan_start   -- Active scan for duration_ms; results accumulate
+//                                on the bridge. discovered_count in the status
+//                                event bumps as devices appear.
+//   2. bluetooth_scan_results -- Page through the accumulated results (offset).
+//   3. bluetooth_pair         -- Connect + bond a device from the scan results.
+//                                Outcome arrives via the status event
+//                                (pair_phase, known list).
+//   4. bluetooth_status       -- Snapshot of known devices / scan / pair state.
+//   5. bluetooth_forget       -- Drop the bond and remove from the known list.
+//
+// LIVE STATUS:
+//   Subscribe to bridge channel 2 (SubscribeRequest with channel_mask bit 2,
+//   device_uuid = bridge UUID) to receive BluetoothStatusEvent pushes.
+//
+// LIMITS:
+//   Known list: 3 devices. Scan results: 16 on the bridge, 4 per page (the
+//   Ringbahn payload ceiling is 245 bytes).
+//
+
+// BLE address type of a peer's identity address.
+enum BleAddressType {
+  BLE_ADDRESS_TYPE_UNSPECIFIED = 0;
+  BLE_ADDRESS_TYPE_PUBLIC = 1;
+  BLE_ADDRESS_TYPE_RANDOM = 2; // static random / resolvable (identity address)
+}
+
+// 6-byte BLE identity address + type. Stable across reconnects even for peers
+// that advertise with resolvable private addresses.
+message BluetoothAddress {
+  bytes value = 1; // Exactly 6 bytes, big-endian as printed (AA:BB:CC:DD:EE:FF)
+  BleAddressType type = 2;
+}
+
+// Coarse device class for UI icons, derived by the bridge from the GAP
+// Appearance value (category = appearance >> 6):
+//   0x001 PHONE, 0x002 COMPUTER, 0x003 WATCH, 0x006 REMOTE_CONTROL,
+//   0x008/0x009 TAG, 0x00C/0x00D/0x00E/0x010/0x011/0x012/0x031/0x033 SENSOR,
+//   0x00F HID -> subtype (appearance & 0x3F): 1 KEYBOARD, 2 MOUSE,
+//         3 JOYSTICK, 4 GAMEPAD, other HID_OTHER,
+//   0x021 SPEAKER (audio sink), 0x025 HEADSET (wearable audio),
+//   any other non-zero category -> OTHER.
+// Without an appearance: HID service (0x1812) -> HID_OTHER, heart-rate (0x180D)
+// or health thermometer (0x1809) service -> SENSOR, else UNSPECIFIED (unknown).
+enum BluetoothDeviceClass {
+  BLUETOOTH_DEVICE_CLASS_UNSPECIFIED = 0; // Unknown
+  BLUETOOTH_DEVICE_CLASS_GAMEPAD = 1;
+  BLUETOOTH_DEVICE_CLASS_JOYSTICK = 2;
+  BLUETOOTH_DEVICE_CLASS_KEYBOARD = 3;
+  BLUETOOTH_DEVICE_CLASS_MOUSE = 4;
+  BLUETOOTH_DEVICE_CLASS_HID_OTHER = 5;
+  BLUETOOTH_DEVICE_CLASS_SPEAKER = 6;
+  BLUETOOTH_DEVICE_CLASS_HEADSET = 7;
+  BLUETOOTH_DEVICE_CLASS_PHONE = 8;
+  BLUETOOTH_DEVICE_CLASS_COMPUTER = 9;
+  BLUETOOTH_DEVICE_CLASS_WATCH = 10;
+  BLUETOOTH_DEVICE_CLASS_REMOTE_CONTROL = 11;
+  BLUETOOTH_DEVICE_CLASS_SENSOR = 12;
+  BLUETOOTH_DEVICE_CLASS_TAG = 13;
+  BLUETOOTH_DEVICE_CLASS_OTHER = 14;
+}
+
+// What the bridge does with a known device. Assigned by the bridge from the
+// device class; the host only displays it.
+enum BluetoothDeviceUsage {
+  BLUETOOTH_DEVICE_USAGE_UNSPECIFIED = 0;
+  BLUETOOTH_DEVICE_USAGE_NONE = 1; // Bonded, but no driver: not auto-connected
+  BLUETOOTH_DEVICE_USAGE_ROVER_CONTROL = 2; // Gamepad/joystick driver -> BLDC broadcast frames
+}
+
+// Progress of the most recent pairing attempt.
+enum BluetoothPairPhase {
+  BLUETOOTH_PAIR_PHASE_UNSPECIFIED = 0;
+  BLUETOOTH_PAIR_PHASE_IDLE = 1; // No attempt in flight (last one succeeded or none yet)
+  BLUETOOTH_PAIR_PHASE_CONNECTING = 2;
+  BLUETOOTH_PAIR_PHASE_PAIRING = 3; // Connected; bonding / service setup in progress
+  BLUETOOTH_PAIR_PHASE_FAILED = 4; // See BluetoothStatus.pair_error
+}
+
+// A bonded device in the bridge's known list.
+message KnownBluetoothDevice {
+  BluetoothAddress address = 1;
+  string name = 2; // GAP name captured at pairing (may be empty)
+  BluetoothDeviceClass device_class = 3;
+  uint32 appearance = 4; // Raw GAP appearance, 0 = unknown
+  BluetoothDeviceUsage usage = 5;
+  bool connected = 6;
+  sint32 rssi = 7; // dBm, meaningful only while connected
+  // true while the driver is acting on the device's input (e.g. publishing
+  // drive frames). false while disconnected, or while a host emergency stop
+  // has latched the driver off until the controls return to neutral.
+  bool active = 8;
+}
+
+// Snapshot of the bridge's Bluetooth state. Also the payload of
+// BluetoothStatusEvent (bridge channel 2).
+message BluetoothStatus {
+  bool scanning = 1;
+  repeated KnownBluetoothDevice known = 2; // At most 3
+  // Number of scan results accumulated so far. Increments as devices are
+  // found; hosts refetch bluetooth_scan_results when it changes.
+  uint32 discovered_count = 3;
+  BluetoothPairPhase pair_phase = 4;
+  // NimBLE host / SM reason code of the last failed pairing, 0 = none.
+  uint32 pair_error = 5;
+}
+
+// A device seen during the most recent scan.
+message DiscoveredBluetoothDevice {
+  BluetoothAddress address = 1;
+  string name = 2; // Advertised name, may be empty
+  BluetoothDeviceClass device_class = 3;
+  uint32 appearance = 4; // Raw GAP appearance from the advert, 0 = absent
+  sint32 rssi = 5; // dBm
+  bool known = 6; // Already in the known list
+}
+
+// Query the Bluetooth snapshot.
+// Response: BluetoothStatus
+message GetBluetoothStatusRequest {}
+
+// Start an active scan. Non-blocking: returns as soon as the scan starts.
+// Response: CommandResult (error_code 3 = a scan or pairing is in progress)
+message BluetoothStartScanRequest {
+  uint32 duration_ms = 1; // 0 = bridge default (8000); clamped to 30000
+  // Only report devices of this class. UNSPECIFIED = all devices.
+  BluetoothDeviceClass class_filter = 2;
+}
+
+// Stop a running scan early. No-op if none is running.
+// Response: CommandResult
+message BluetoothStopScanRequest {}
+
+// Fetch one page of the most recent scan's results, ordered by RSSI desc.
+// Response: BluetoothScanResults
+message GetBluetoothScanResultsRequest {
+  uint32 offset = 1; // Index of the first result to return
+}
+
+// One page of scan results.
+message BluetoothScanResults {
+  bool scanning = 1; // true while the scan is still running
+  uint32 total = 2; // Total results accumulated on the bridge
+  uint32 offset = 3; // Echo of the request offset
+  repeated DiscoveredBluetoothDevice results = 4; // At most 4 per page
+}
+
+// Connect to and bond with a device from the current scan results.
+// Non-blocking: success means the attempt started. Outcome via the status
+// event / bluetooth_status (pair_phase, known list).
+// Response: CommandResult
+//   error_code 2 = address not in the current scan results
+//   error_code 3 = a scan or pairing is in progress
+//   error_code 8 = known list is full (forget a device first)
+message BluetoothPairRequest {
+  BluetoothAddress address = 1;
+}
+
+// Disconnect (if connected), delete the bond and remove from the known list.
+// Response: CommandResult (error_code 2 = address not known)
+message BluetoothForgetRequest {
+  BluetoothAddress address = 1;
+}
+
+// ============================================================================
 // Throughput Test (bridge-local)
 // ============================================================================
 //
