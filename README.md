@@ -1,8 +1,8 @@
 # Terranova Protocol Buffers
 
-[![CI](https://github.com/Terranova/Protobufs/actions/workflows/ci.yml/badge.svg)](https://github.com/Terranova/Protobufs/actions/workflows/ci.yml)
-[![Lint](https://github.com/Terranova/Protobufs/actions/workflows/lint.yml/badge.svg)](https://github.com/Terranova/Protobufs/actions/workflows/lint.yml)
-[![Build](https://github.com/Terranova/Protobufs/actions/workflows/build.yml/badge.svg)](https://github.com/Terranova/Protobufs/actions/workflows/build.yml)
+[![CI](https://github.com/Levitree/protobufs/actions/workflows/ci.yml/badge.svg)](https://github.com/Levitree/protobufs/actions/workflows/ci.yml)
+[![Lint](https://github.com/Levitree/protobufs/actions/workflows/lint.yml/badge.svg)](https://github.com/Levitree/protobufs/actions/workflows/lint.yml)
+[![Build](https://img.shields.io/github/actions/workflow/status/Levitree/protobufs/ci.yml?label=Build)](https://github.com/Levitree/protobufs/actions/workflows/ci.yml)
 
 This repository contains the Protocol Buffer definitions for the Terranova distributed control system. These definitions enable communication between various devices in the Terranova ecosystem including hubs, nodes, sensors, and actuators.
 
